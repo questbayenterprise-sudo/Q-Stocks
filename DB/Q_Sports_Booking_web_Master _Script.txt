@@ -1,0 +1,287 @@
+-- Enable UUID generation (PostgreSQL)
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- =========================
+-- Users table
+-- =========================
+
+CREATE TABLE IF NOT EXISTS users (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    username        VARCHAR(100) NOT NULL,
+    email           VARCHAR(150) UNIQUE NOT NULL,
+    phoneno         VARCHAR(15),
+    address         VARCHAR,
+    city            VARCHAR,
+    latitude        DOUBLE PRECISION,
+    longitude       DOUBLE PRECISION,
+    state_territory VARCHAR,
+    acccode         TEXT NOT NULL,
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    retry_cnt_lmt   int default 3,
+    retrycnt_updated_on timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- Roles table
+-- =========================
+
+CREATE TABLE IF NOT EXISTS  roles (
+    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    role_name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- =========================
+-- User ↔ Role mapping (many-to-many)
+-- =========================
+
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- =========================
+-- sports table
+-- =========================
+CREATE TABLE IF NOT EXISTS  sports (
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name        VARCHAR(50) UNIQUE NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- venues table
+-- =========================
+CREATE TABLE IF NOT EXISTS  venues (
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    location    TEXT NOT NULL,
+    price       NUMERIC(10,2) NOT NULL,  
+    capacity    INTEGER,                 
+    description TEXT,                      
+    image_url TEXT,
+    contact_phone VARCHAR(20),
+    contact_email VARCHAR(100),
+    is_active   BOOLEAN DEFAULT TRUE,
+    is_deleted   BOOLEAN DEFAULT FALSE,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- courts table
+-- =========================
+CREATE TABLE IF NOT EXISTS  courts (
+	id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	venue_id INT REFERENCES venues(id) ON DELETE CASCADE,
+	sport_id INT REFERENCES sports(id),
+	name VARCHAR(50),
+	price_per_hour NUMERIC(10,2) NOT NULL,
+	created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- Time slots table
+-- =========================
+CREATE TABLE if not exists time_slots (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    court_id INT,
+    start_time TIMESTAMP NOT NULL,
+    end_time   TIMESTAMP NOT NULL,
+    is_booked  BOOLEAN DEFAULT FALSE,
+    venue_id int,
+    price NUMERIC(10,2)
+);
+
+-- =========================
+-- bookings table
+-- =========================
+CREATE TABLE if not exists bookings (
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id     INT REFERENCES users(id),
+    court_id   INT REFERENCES courts(id),
+    venue_id   INT REFERENCES venues(id),
+    slot_id    INT REFERENCES time_slots(id),
+    status      VARCHAR(20) DEFAULT 'CONFIRMED',
+    booked_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sports_id int REFERENCES sports(id),
+);
+
+-- =========================
+-- bookings_mapping table
+-- =========================
+CREATE TABLE if not exists bookings_mapping (
+    booking_id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    start_time     VARCHAR(20),
+    end_time   VARCHAR(20),
+    slot_id    INT REFERENCES time_slots(id)
+);
+
+-- =========================
+-- user_settings table
+-- =========================
+CREATE TABLE IF NOT EXISTS user_settings
+(
+    id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    user_id integer NOT NULL,
+    language_type character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    region character varying(150) COLLATE pg_catalog."default" NOT NULL,
+    push_notify boolean DEFAULT true,
+    mail_upd boolean DEFAULT true,
+    themes text COLLATE pg_catalog."default" NOT NULL DEFAULT 'light'::text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    isdelete integer DEFAULT 0,
+    CONSTRAINT user_settings_pkey PRIMARY KEY (id),
+    CONSTRAINT user_settings_users_id_fkey FOREIGN KEY (user_id) REFERENCES public.users (id) MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
+);
+
+-- =========================
+-- verify_otp table
+-- =========================
+CREATE TABLE IF NOT EXISTS otp_log (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    userid          BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    emailid         VARCHAR(150) NOT NULL,
+    phoneno         VARCHAR(15),
+    otp             VARCHAR(6) NOT NULL,
+    is_verified     BOOLEAN DEFAULT false,
+    is_resend       BOOLEAN DEFAULT false,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at      TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '7 minutes'),
+    verified_at     TIMESTAMP NULL,
+    resend_at       TIMESTAMP NULL
+);
+
+-- Index for faster lookups
+CREATE INDEX idx_otp_email ON otp_log(emailid);
+CREATE INDEX idx_otp_userid ON otp_log(userid);
+
+-- =========================
+-- user_venue_mapping table
+-- =========================
+CREATE TABLE IF NOT EXISTS user_venue_mapping (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id        INTEGER NOT NULL,
+    venue_id       INTEGER NOT NULL,
+	is_active bool default true,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- Insert query
+-- =========================
+-- =========================
+-- sports insert
+-- =========================
+INSERT INTO sports (name)
+SELECT v.name
+FROM (VALUES
+('Football'),
+('Cricket'),
+('Badminton'),
+('Tennis'),
+('Basketball'),
+('Volleyball'),
+('Hockey'),
+('Table Tennis'),
+('Swimming'),
+('Squash')
+) AS v(name)
+WHERE NOT EXISTS (
+    SELECT 1 FROM sports s WHERE s.name = v.name
+);
+
+-- =========================
+-- roles insert
+-- =========================
+
+INSERT INTO roles (role_name)
+SELECT v.role_name
+FROM (VALUES
+('admin'),
+('user'),
+('manager'),
+('vendor')
+) AS v(role_name)
+WHERE NOT EXISTS (
+    SELECT 1 FROM roles r WHERE r.role_name = v.role_name
+);
+
+
+-- =========================
+-- cities table
+-- =========================
+CREATE TABLE IF NOT EXISTS cities (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    state VARCHAR(150) NOT NULL DEFAULT 'Tamil Nadu',
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- =========================
+-- Tamil Nadu cities insert
+-- =========================
+INSERT INTO cities (name, state)
+SELECT v.name, 'Tamil Nadu'
+FROM (VALUES
+('Ariyalur'),('Chengalpattu'),('Chennai'),('Coimbatore'),('Cuddalore'),
+('Dharmapuri'),('Dindigul'),('Erode'),('Hosur'),('Kallakurichi'),
+('Kanchipuram'),('Karur'),('Krishnagiri'),('Kumbakonam'),('Madurai'),
+('Mayiladuthurai'),('Nagapattinam'),('Namakkal'),('Nagercoil'),
+('Ooty'),('Perambalur'),('Pudukkottai'),('Ramanathapuram'),
+('Ranipet'),('Salem'),('Sivaganga'),('Tenkasi'),('Thanjavur'),
+('Theni'),('Thoothukudi'),('Tiruchirappalli'),('Tirunelveli'),
+('Tirupathur'),('Tiruppur'),('Tiruvallur'),('Tiruvannamalai'),
+('Tiruvarur'),('Vellore'),('Viluppuram'),('Virudhunagar')
+) AS v(name)
+WHERE NOT EXISTS (
+    SELECT 1 FROM cities c WHERE c.name = v.name AND c.state = 'Tamil Nadu'
+);
+
+-- Generated by the database client.
+CREATE TABLE tbl_general_settings(
+    enable_verify_otp boolean DEFAULT true,
+    enable_skip_login boolean DEFAULT true,
+    retry_count_limit int default 3,
+    enable_payment boolean DEFAULT false
+);
+
+-- Default settings row
+INSERT INTO tbl_general_settings (enable_verify_otp, enable_skip_login, retry_count_limit, enable_payment)
+SELECT true, true, 3, false
+WHERE NOT EXISTS (SELECT 1 FROM tbl_general_settings);
+
+
+ALTER TABLE users ADD COLUMN latitude DOUBLE PRECISION, ADD COLUMN longitude DOUBLE PRECISION;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+
+-- =========================
+-- user_fcm_tokens table (one user, multiple devices)
+-- =========================
+CREATE TABLE IF NOT EXISTS user_fcm_tokens (
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    fcm_token   TEXT NOT NULL,
+    device_id   VARCHAR(255),
+    device_name VARCHAR(255),
+    platform    VARCHAR(20) DEFAULT 'android',
+    is_active   BOOLEAN DEFAULT TRUE,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, fcm_token)
+);
+
+-- =========================
+-- Payment columns for bookings
+-- =========================
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_payment_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_url TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'NA';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(255);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS amount NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_at TIMESTAMP;
+ALTER TABLE cities ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE cities ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;

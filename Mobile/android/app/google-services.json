@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "806688112248",
+    "project_id": "q-sports-fcm",
+    "storage_bucket": "q-sports-fcm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:806688112248:android:ad606939eac0748fb0b78d",
+        "android_client_info": {
+          "package_name": "com.example.q_play"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbSfbJhz3nVIvml3gGqjL5FltSrhpqFgY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

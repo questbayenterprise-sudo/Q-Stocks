@@ -1,0 +1,25 @@
+﻿# Flutter / Android build
+Mobile/build/
+Mobile/.dart_tool/
+Mobile/.flutter-plugins
+Mobile/.flutter-plugins-dependencies
+
+# Android
+*.apk
+*.aab
+*.so
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.log
+*.iml   
+
+*.exe
+__debug_bin.exe*
+App/Q_Sports_Booking_App/app/

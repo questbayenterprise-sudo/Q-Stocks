@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(\"C:/Users/hp/AppData/Local/Android/sdk/platform-tools/adb\" devices:*)",
+      "Bash(flutter run:*)"
+    ]
+  }
+}
