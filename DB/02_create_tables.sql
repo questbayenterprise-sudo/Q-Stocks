@@ -1,301 +1,277 @@
 -- ============================================================
--- Q-Sports: CREATE ALL TABLES + INDEXES + SEED DATA
--- Clean script — all ALTER columns are merged into CREATE TABLE
+-- 1. DATABASE CREATION
 -- ============================================================
+-- Note: Run CREATE DATABASE separately if your environment requires it.
+-- CREATE DATABASE broiler_mgmt_system;
+-- \c broiler_mgmt_system;
 
--- Enable UUID generation (PostgreSQL)
+-- Enable UUID and Crypto extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- =========================
--- 1. Users table
--- =========================
+-- ============================================================
+-- 2. INFRASTRUCTURE & SETTINGS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS tbl_general_settings (
+    id                INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    shop_name         VARCHAR(100) DEFAULT 'Broiler Management System',
+    currency_symbol   VARCHAR(5) DEFAULT '₹',
+    enable_otp        BOOLEAN DEFAULT TRUE,
+    low_stock_limit   NUMERIC(10,3) DEFAULT 5.000,
+    decimal_places    INTEGER DEFAULT 2,
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cities (
+    id        INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name      VARCHAR(150) NOT NULL,
+    state     VARCHAR(150) DEFAULT 'Tamil Nadu',
+    latitude  DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- ============================================================
+-- 3. IDENTITY & ACCESS MANAGEMENT (Users, Roles, OTP)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS roles (
+    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    role_name  VARCHAR(50) UNIQUE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users (
     id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username        VARCHAR(100) NOT NULL,
     email           VARCHAR(150) UNIQUE NOT NULL,
     phoneno         VARCHAR(15),
+    password_hash   TEXT, -- For login
     address         VARCHAR,
     city            VARCHAR,
-    latitude        DOUBLE PRECISION,
-    longitude       DOUBLE PRECISION,
-    bio             TEXT,
     image_url       TEXT,
-    state_territory VARCHAR,
-    acccode         TEXT NOT NULL,
     is_active       BOOLEAN DEFAULT TRUE,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    retry_cnt_lmt   INT DEFAULT 5,
-    retrycnt_updated_on TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =========================
--- 2. Roles table
--- =========================
-CREATE TABLE IF NOT EXISTS roles (
-    id        INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    role_name VARCHAR(50) UNIQUE NOT NULL
-);
-
--- =========================
--- 3. User-Role mapping (many-to-many)
--- =========================
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, role_id)
 );
 
--- =========================
--- 4. Sports table
--- =========================
-CREATE TABLE IF NOT EXISTS sports (
-    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name       VARCHAR(50) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- =========================
--- 5. Venues table
--- =========================
-CREATE TABLE IF NOT EXISTS venues (
-    id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name          VARCHAR(100) NOT NULL,
-    location      TEXT NOT NULL,
-    price         NUMERIC(10,2) NOT NULL,
-    capacity      INTEGER,
-    description   TEXT,
-    image_url     TEXT,
-    contact_phone VARCHAR(20),
-    contact_email VARCHAR(100),
-    created_by    INTEGER,
-    is_active     BOOLEAN DEFAULT TRUE,
-    is_deleted    BOOLEAN DEFAULT FALSE,
-    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- =========================
--- 6. Courts table (venue-sport mapping)
--- =========================
-CREATE TABLE IF NOT EXISTS courts (
-    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    venue_id       INT REFERENCES venues(id) ON DELETE CASCADE,
-    sport_id       INT REFERENCES sports(id),
-    name           VARCHAR(50),
-    price_per_hour NUMERIC(10,2) NOT NULL,
-    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- =========================
--- 7. Time slots table
--- =========================
-CREATE TABLE IF NOT EXISTS time_slots (
-    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    court_id   INT,
-    start_time TIMESTAMP NOT NULL,
-    end_time   TIMESTAMP NOT NULL,
-    is_booked  BOOLEAN DEFAULT FALSE,
-    venue_id   INT,
-    price      NUMERIC(10,2)
-);
-
--- =========================
--- 8. Bookings table (payment columns included)
--- =========================
-CREATE TABLE IF NOT EXISTS bookings (
-    id                  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    booking_ref         VARCHAR(20) UNIQUE,
-    user_id             INT REFERENCES users(id),
-    court_id            INT,
-    venue_id            INT REFERENCES venues(id),
-    slot_id             INT REFERENCES time_slots(id),
-    status              VARCHAR(20) DEFAULT 'CONFIRMED',
-    sports_id           INT REFERENCES sports(id),
-    is_payment_enabled  BOOLEAN DEFAULT FALSE,
-    payment_url         TEXT,
-    payment_status      VARCHAR(50) DEFAULT 'NA',
-    transaction_id      VARCHAR(255),
-    amount              NUMERIC(10,2) DEFAULT 0,
-    payment_at          TIMESTAMP,
-    booked_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- =========================
--- 9. Bookings mapping table
--- =========================
-CREATE TABLE IF NOT EXISTS bookings_mapping (
-    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    booking_id INTEGER NOT NULL,
-    start_time VARCHAR(20),
-    end_time   VARCHAR(20),
-    slot_id    INT,
-    sports_id  INT,
-    court_id   INT
-);
-
--- =========================
--- 10. User settings table
--- =========================
-CREATE TABLE IF NOT EXISTS user_settings (
-    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    language_type VARCHAR(150) NOT NULL DEFAULT 'en',
-    region     VARCHAR(150) NOT NULL DEFAULT 'IN',
-    push_notify BOOLEAN DEFAULT TRUE,
-    mail_upd   BOOLEAN DEFAULT TRUE,
-    themes     TEXT NOT NULL DEFAULT 'light',
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    isdelete   INTEGER DEFAULT 0
-);
-
--- =========================
--- 11. OTP log table
--- =========================
 CREATE TABLE IF NOT EXISTS otp_log (
-    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    userid      BIGINT REFERENCES users(id) ON DELETE CASCADE,
-    emailid     VARCHAR(150) NOT NULL,
-    phoneno     VARCHAR(15),
-    otp         VARCHAR(6) NOT NULL,
-    is_verified BOOLEAN DEFAULT FALSE,
-    is_resend   BOOLEAN DEFAULT FALSE,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at  TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '7 minutes'),
-    verified_at TIMESTAMP NULL,
-    resend_at   TIMESTAMP NULL
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    userid          INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    phoneno         VARCHAR(15),
+    otp             VARCHAR(6) NOT NULL,
+    is_verified     BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at      TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '10 minutes')
 );
 
--- Indexes for OTP lookup
-CREATE INDEX IF NOT EXISTS idx_otp_email ON otp_log(emailid);
-CREATE INDEX IF NOT EXISTS idx_otp_userid ON otp_log(userid);
-
--- =========================
--- 12. User-Venue mapping table
--- =========================
-CREATE TABLE IF NOT EXISTS user_venue_mapping (
-    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id    INTEGER NOT NULL,
-    venue_id   INTEGER NOT NULL,
-    is_active  BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- =========================
--- 13. Cities table (with lat/lng)
--- =========================
-CREATE TABLE IF NOT EXISTS cities (
-    id        INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name      VARCHAR(150) NOT NULL,
-    state     VARCHAR(150) NOT NULL DEFAULT 'Tamil Nadu',
-    latitude  DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    is_active BOOLEAN DEFAULT TRUE
-);
-
--- =========================
--- 14. General settings table
--- =========================
-CREATE TABLE IF NOT EXISTS tbl_general_settings (
-    enable_verify_otp BOOLEAN DEFAULT TRUE,
-    enable_skip_login BOOLEAN DEFAULT TRUE,
-    retry_count_limit INT DEFAULT 3,
-    enable_payment    BOOLEAN DEFAULT FALSE
-);
-
--- =========================
--- 15. User FCM tokens table (one user, multiple devices)
--- =========================
 CREATE TABLE IF NOT EXISTS user_fcm_tokens (
     id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     fcm_token   TEXT NOT NULL,
     device_id   VARCHAR(255),
-    device_name VARCHAR(255),
     platform    VARCHAR(20) DEFAULT 'android',
-    is_active   BOOLEAN DEFAULT TRUE,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, fcm_token)
 );
 
+-- ============================================================
+-- 4. SHOP & MASTER DATA
+-- ============================================================
 
--- =========================
--- 16. Conversations table
--- =========================
-CREATE TABLE IF NOT EXISTS conversations (
+CREATE TABLE IF NOT EXISTS payment_modes (
     id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user1_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    user2_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    venue_id    INTEGER REFERENCES venues(id) ON DELETE SET NULL,
-    booking_id  INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
-    context     VARCHAR(50) DEFAULT 'general',  -- general, booking, support
+    name        VARCHAR(50) NOT NULL UNIQUE, -- Cash, PhonePe, G-Pay, Credit/Debit Card
     is_active   BOOLEAN DEFAULT TRUE,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Unique index using COALESCE (PostgreSQL doesn't allow COALESCE in UNIQUE constraint)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_unique
-    ON conversations (user1_id, user2_id, COALESCE(venue_id, 0), COALESCE(booking_id, 0));
+CREATE TABLE IF NOT EXISTS shops (
+    id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name          VARCHAR(100) NOT NULL,
+    location      TEXT NOT NULL,
+    city_id       INTEGER REFERENCES cities(id),
+    contact_phone VARCHAR(20),
+    is_active     BOOLEAN DEFAULT TRUE,
+    created_by    INTEGER REFERENCES users(id),
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-CREATE INDEX IF NOT EXISTS idx_conversations_user1 ON conversations(user1_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_user2 ON conversations(user2_id);
+CREATE TABLE IF NOT EXISTS shop_user_mapping (
+    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    shop_id    INTEGER NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+    is_active  BOOLEAN DEFAULT TRUE
+);
 
--- =========================
--- 17. Messages table
--- =========================
-CREATE TABLE IF NOT EXISTS messages (
+-- ============================================================
+-- 5. PRODUCT & INVENTORY MANAGEMENT
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS categories (
+    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name       VARCHAR(50) UNIQUE NOT NULL, -- Broiler, Country Chicken, Eggs
+    image_url  TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    category_id    INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    name           VARCHAR(100) NOT NULL,
+    uom            VARCHAR(10) DEFAULT 'KG', -- Unit of Measure (KG, Pcs, Tray)
+    base_price     NUMERIC(10,2) NOT NULL,
+    is_active      BOOLEAN DEFAULT TRUE,
+    image_url      TEXT,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Real-time stock for each shop
+CREATE TABLE IF NOT EXISTS stocks (
+    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    shop_id        INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+    product_id     INTEGER REFERENCES products(id) ON DELETE CASCADE,
+    current_qty    NUMERIC(10,3) DEFAULT 0.000, -- 3 decimals for Grams
+    min_stock_lvl  NUMERIC(10,3) DEFAULT 5.000,
+    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- History of stock movements (Sales, Purchases, Wastage)
+CREATE TABLE IF NOT EXISTS stock_logs (
+    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    stock_id       INTEGER REFERENCES stocks(id),
+    change_qty     NUMERIC(10,3) NOT NULL,
+    log_type       VARCHAR(20), -- 'IN' (Purchase), 'OUT' (Sale), 'WASTE' (Death/Damage)
+    remarks        TEXT,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- 6. CUSTOMERS & LEDGER (THE "NOTEBOOK" SYSTEM)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS customers (
+    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name           VARCHAR(100) NOT NULL,
+    phone          VARCHAR(15) UNIQUE,
+    address        TEXT,
+    opening_balance NUMERIC(10,2) DEFAULT 0,
+    current_balance NUMERIC(10,2) DEFAULT 0, -- Balance as of today
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS orders (
     id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    sender_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    message         TEXT NOT NULL,
-    message_type    VARCHAR(20) DEFAULT 'text',  -- text, image, file
-    is_read         BOOLEAN DEFAULT FALSE,
+    order_ref       VARCHAR(20) UNIQUE,
+    shop_id         INTEGER REFERENCES shops(id),
+    customer_id     INTEGER REFERENCES customers(id),
+    user_id         INTEGER REFERENCES users(id), -- Billed by
+    paymode_id      INTEGER REFERENCES payment_modes(id),
+    total_amount    NUMERIC(10,2) NOT NULL,
+    paid_amount     NUMERIC(10,2) DEFAULT 0,
+    balance_due     NUMERIC(10,2) DEFAULT 0,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
-CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
-CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(conversation_id, created_at DESC);
-
--- =========================
--- 18. Venue Likes table
--- =========================
-CREATE TABLE IF NOT EXISTS venue_likes (
-    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    venue_id   INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, venue_id)
+CREATE TABLE IF NOT EXISTS order_items (
+    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id       INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    product_id     INTEGER REFERENCES products(id),
+    weight         NUMERIC(10,3) NOT NULL, -- The 'Weight' col from sketch
+    rate           NUMERIC(10,2) NOT NULL, -- The 'Rate' col from sketch
+    sub_total      NUMERIC(10,2) NOT NULL  -- The 'Amount' col (Weight * Rate)
 );
 
-CREATE INDEX IF NOT EXISTS idx_venue_likes_user ON venue_likes(user_id);
-CREATE INDEX IF NOT EXISTS idx_venue_likes_venue ON venue_likes(venue_id);
+-- THE CUSTOMER LEDGER (Notebook History)
+CREATE TABLE IF NOT EXISTS customer_ledger (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    customer_id     INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    shop_id         INTEGER NOT NULL REFERENCES shops(id),
+    order_id        INTEGER REFERENCES orders(id), -- Optional: Link to sale
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    weight          NUMERIC(10,3), -- Hand-written ledger compatibility
+    rate            NUMERIC(10,2), -- Hand-written ledger compatibility
+    debit_amount    NUMERIC(10,2) DEFAULT 0, -- Purchases
+    credit_amount   NUMERIC(10,2) DEFAULT 0, -- Payments
+    running_balance NUMERIC(10,2) NOT NULL,  -- Calculation: Prev + Debit - Credit
+    paymode_id      INTEGER REFERENCES payment_modes(id),
+    remarks         TEXT
+);
 
 -- ============================================================
--- DONE: All tables and indexes created
--- Now run 03_seed_data.sql for master/config data
+-- 7. ENGAGEMENT & LOGS
 -- ============================================================
--- =========================
--- 19. Notifications table
--- =========================
+
 CREATE TABLE IF NOT EXISTS notifications (
     id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type        VARCHAR(50) NOT NULL DEFAULT 'booking',
     title       VARCHAR(255) NOT NULL,
     body        TEXT,
-    data        JSONB DEFAULT '{}',
     is_read     BOOLEAN DEFAULT FALSE,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(user_id, is_read);
+-- Create Indexes for performance
+CREATE INDEX idx_ledger_customer ON customer_ledger(customer_id);
+CREATE INDEX idx_stocks_product ON stocks(product_id, shop_id);
+CREATE INDEX idx_orders_customer ON orders(customer_id);
+-- ============================================================
+-- 9. SUPPLIER MANAGEMENT (The "Inward" side)
+-- ============================================================
 
-ALTER TABLE bookings_mapping DROP CONSTRAINT IF EXISTS bookings_mapping_slot_id_fkey;
+CREATE TABLE IF NOT EXISTS suppliers (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    phone           VARCHAR(15),
+    address         TEXT,
+    current_balance NUMERIC(10,2) DEFAULT 0, -- Money you owe the supplier
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-ALTER TABLE bookings_mapping ADD COLUMN IF NOT EXISTS sports_id INT;
-ALTER TABLE bookings_mapping ADD COLUMN IF NOT EXISTS court_id INT;
+CREATE TABLE IF NOT EXISTS purchases (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    supplier_id     INTEGER REFERENCES suppliers(id),
+    shop_id         INTEGER REFERENCES shops(id),
+    total_qty       NUMERIC(10,3) NOT NULL, -- Total KG bought
+    unit_price      NUMERIC(10,2) NOT NULL, -- Rate at which you bought
+    total_amount    NUMERIC(10,2) NOT NULL,
+    paid_amount     NUMERIC(10,2) DEFAULT 0,
+    bill_image      TEXT, -- Photo of the supplier's bill
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- 10. DAILY PRICE MASTER
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS daily_rates (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    shop_id         INTEGER REFERENCES shops(id),
+    product_id      INTEGER REFERENCES products(id),
+    today_rate      NUMERIC(10,2) NOT NULL,
+    effective_date  DATE DEFAULT CURRENT_DATE,
+    UNIQUE(shop_id, product_id, effective_date)
+);
+
+-- ============================================================
+-- 11. SHOP EXPENSES (For Profit/Loss Calculation)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS expense_categories (
+    id      INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name    VARCHAR(50) NOT NULL -- Rent, Salary, Feed, Electricity, Transport
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    shop_id         INTEGER REFERENCES shops(id),
+    category_id     INTEGER REFERENCES expense_categories(id),
+    amount          NUMERIC(10,2) NOT NULL,
+    expense_date    DATE DEFAULT CURRENT_DATE,
+    remarks         TEXT,
+    created_by      INTEGER REFERENCES users(id)
+);
