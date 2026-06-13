@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 // --- Auth Imports ---
@@ -47,6 +48,8 @@ import '../../features/My Venues/domain/entities/venue.dart';
 
 // --- Widgets ---
 import '../../../core/widgets/custom_bottom_nav.dart';
+import '../../features/venues/data/repositories/venue_repository.dart';
+import '../../features/venues/presentation/bloc/venue_bloc.dart';
 
 // --- Role-based route sets ---
 const _adminOnlyRoutes = {'/admin-settings', '/admin-bookings-full', '/admin-users', '/venue-mapping'};
@@ -138,10 +141,13 @@ final GoRouter appRouter = GoRouter(
           path: '/trainers',
           builder: (context, state) => const TrainersPage(),
         ),
-          GoRoute(
-          path: '/venues',
-          builder: (context, state) => const VenueListPage(),
-        ),
+        GoRoute(
+  path: '/venues',
+  builder: (context, state) => BlocProvider(
+    create: (context) => VenueBloc(VenueRepository()), // Bloc exists ONLY for this route
+    child: const VenueListPage(),
+  ),
+),
            GoRoute(
           path: '/Myvenues',
           builder: (context, state) => const MyVenueListPage(),
