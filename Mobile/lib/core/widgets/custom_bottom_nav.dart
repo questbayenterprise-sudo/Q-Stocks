@@ -81,7 +81,6 @@ class _TabItemState extends State<_TabItem> with SingleTickerProviderStateMixin 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Glow dot
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutCubic,
@@ -96,7 +95,6 @@ class _TabItemState extends State<_TabItem> with SingleTickerProviderStateMixin 
                       : [],
                 ),
               ),
-              // Icon with background glow
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.all(6),
@@ -113,7 +111,6 @@ class _TabItemState extends State<_TabItem> with SingleTickerProviderStateMixin 
                 ),
               ),
               const SizedBox(height: 2),
-              // Label
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(
@@ -144,8 +141,20 @@ class _GuestNav extends StatelessWidget {
     final idx = path.startsWith('/more') ? 1 : 0;
     return _buildBar(context, 64, Row(
       children: [
-        _TabItem(icon: Icons.explore_outlined, activeIcon: Icons.explore, label: "Explore", isActive: idx == 0, onTap: () => context.go('/venues')),
-        _TabItem(icon: Icons.menu_rounded, activeIcon: Icons.menu_rounded, label: "More", isActive: idx == 1, onTap: () => context.go('/more')),
+        _TabItem(
+          icon: Icons.storefront_outlined, 
+          activeIcon: Icons.storefront, 
+          label: "Shop", 
+          isActive: idx == 0, 
+          onTap: () => context.go('/shops')
+        ),
+        _TabItem(
+          icon: Icons.menu_rounded, 
+          activeIcon: Icons.menu_rounded, 
+          label: "More", 
+          isActive: idx == 1, 
+          onTap: () => context.go('/more')
+        ),
       ],
     ));
   }
@@ -162,7 +171,7 @@ class _DefaultNav extends StatelessWidget {
   int _idx(BuildContext context) {
     final p = GoRouterState.of(context).uri.path;
     if (p.startsWith('/home')) return 0;
-    if (p.startsWith('/venues') || p.startsWith('/Myvenues') || p.startsWith('/add-venue') || p.startsWith('/my-add-venue')) return 1;
+    if (p.startsWith('/shops') || p.startsWith('/my-shops') || p.startsWith('/add-shop') || p.startsWith('/my-add-shop')) return 1;
     return 2;
   }
 
@@ -172,7 +181,13 @@ class _DefaultNav extends StatelessWidget {
     return _buildBar(context, 68, Row(
       children: [
         _TabItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: "Home", isActive: idx == 0, onTap: () => context.go('/home')),
-        _TabItem(icon: Icons.explore_outlined, activeIcon: Icons.explore, label: isAdmin ? "Venues" : "Explore", isActive: idx == 1, onTap: () => context.go(isAdmin ? '/Myvenues' : '/venues')),
+        _TabItem(
+          icon: Icons.shopping_basket_outlined, 
+          activeIcon: Icons.shopping_basket, 
+          label: isAdmin ? "Shops" : "Shop", 
+          isActive: idx == 1, 
+          onTap: () => context.go(isAdmin ? '/my-shops' : '/shops')
+        ),
         _TabItem(icon: Icons.menu_rounded, activeIcon: Icons.menu_rounded, label: "More", isActive: idx == 2, onTap: () => context.go('/more')),
       ],
     ));
@@ -189,8 +204,8 @@ class _OwnerNav extends StatelessWidget {
   int _idx(BuildContext context) {
     final p = GoRouterState.of(context).uri.path;
     if (p.startsWith('/home')) return 0;
-    if (p.startsWith('/Myvenues') || p.startsWith('/my-add-venue')) return 1;
-    if (p.startsWith('/my-bookings')) return 3;
+    if (p.startsWith('/my-shops') || p.startsWith('/my-add-shop')) return 1;
+    if (p.startsWith('/sales') || p.startsWith('/inventory')) return 3;
     return 4;
   }
 
@@ -205,7 +220,6 @@ class _OwnerNav extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Bar
           Positioned(
             left: 12,
             right: 12,
@@ -217,23 +231,31 @@ class _OwnerNav extends StatelessWidget {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(color: Colors.black.withAlpha(isDark ? 60 : 18), blurRadius: 28, offset: const Offset(0, 8)),
-                  BoxShadow(color: _kGreen.withAlpha(isDark ? 0 : 6), blurRadius: 40, offset: const Offset(0, 4)),
                 ],
               ),
               child: Row(
                 children: [
                   _TabItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: "Home", isActive: idx == 0, onTap: () => context.go('/home')),
-                  _TabItem(icon: Icons.sports_soccer_outlined, activeIcon: Icons.sports_soccer, label: "My Turfs", isActive: idx == 1, onTap: () => context.go('/Myvenues')),
-                  // Spacer for center FAB
+                  _TabItem(
+                    icon: Icons.storefront_outlined, 
+                    activeIcon: Icons.storefront, 
+                    label: "My Shops", 
+                    isActive: idx == 1, 
+                    onTap: () => context.go('/my-shops')
+                  ),
                   const SizedBox(width: 76),
-                  _TabItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: "Bookings", isActive: idx == 3, onTap: () => context.go('/my-bookings')),
+                  _TabItem(
+                    icon: Icons.receipt_long_outlined, 
+                    activeIcon: Icons.receipt_long, 
+                    label: "Sales", 
+                    isActive: idx == 3, 
+                    onTap: () => context.go('/inventory/sales')
+                  ),
                   _TabItem(icon: Icons.menu_rounded, activeIcon: Icons.menu_rounded, label: "More", isActive: idx == 4, onTap: () => context.go('/more')),
                 ],
               ),
             ),
           ),
-
-          // Scan FAB
           Positioned(
             bottom: pad + 28,
             left: 0,
@@ -247,7 +269,7 @@ class _OwnerNav extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════
-// SCAN FAB — Pulsing glow + bounce
+// SCAN FAB (Invoices / QR Sales)
 // ═══════════════════════════════════════════
 
 class _ScanFab extends StatefulWidget {
@@ -281,46 +303,24 @@ class _ScanFabState extends State<_ScanFab> with SingleTickerProviderStateMixin 
       onTap: () {
         HapticFeedback.mediumImpact();
         Navigator.push(context, PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 350),
-          reverseTransitionDuration: const Duration(milliseconds: 200),
           pageBuilder: (c, a, b) => const QrScannerPage(),
-          transitionsBuilder: (c, anim, b, child) => FadeTransition(
-            opacity: anim,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.8, end: 1.0).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutBack)),
-              child: child,
-            ),
-          ),
+          transitionsBuilder: (c, anim, b, child) => FadeTransition(opacity: anim, child: child),
         ));
       },
       child: AnimatedBuilder(
         listenable: _glowAnim,
         builder: (context, child) {
           return Container(
-            width: 64,
-            height: 64,
+            width: 64, height: 64,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
                 colors: [_kGreenLight, _kGreen, Color(0xFF008F5D)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                begin: Alignment.topLeft, end: Alignment.bottomRight,
               ),
-              border: Border.all(
-                color: widget.isDark ? const Color(0xFF1A1A1A) : Colors.white,
-                width: 4,
-              ),
+              border: Border.all(color: widget.isDark ? const Color(0xFF1A1A1A) : Colors.white, width: 4),
               boxShadow: [
-                BoxShadow(
-                  color: _kGreen.withAlpha((_glowAnim.value * 120).toInt()),
-                  blurRadius: 20,
-                  spreadRadius: 4,
-                ),
-                BoxShadow(
-                  color: _kGreen.withAlpha(40),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
+                BoxShadow(color: _kGreen.withAlpha((_glowAnim.value * 120).toInt()), blurRadius: 20, spreadRadius: 4),
               ],
             ),
             child: const Column(
@@ -328,7 +328,7 @@ class _ScanFabState extends State<_ScanFab> with SingleTickerProviderStateMixin 
               children: [
                 Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 22),
                 SizedBox(height: 1),
-                Text("SCAN", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                Text("SCAN", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
               ],
             ),
           );
@@ -337,10 +337,6 @@ class _ScanFabState extends State<_ScanFab> with SingleTickerProviderStateMixin 
     );
   }
 }
-
-// ═══════════════════════════════════════════
-// SHARED HELPERS
-// ═══════════════════════════════════════════
 
 Widget _buildBar(BuildContext context, double h, Widget child) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -353,7 +349,6 @@ Widget _buildBar(BuildContext context, double h, Widget child) {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(color: Colors.black.withAlpha(isDark ? 60 : 18), blurRadius: 28, offset: const Offset(0, 8)),
-          BoxShadow(color: _kGreen.withAlpha(isDark ? 0 : 6), blurRadius: 40, offset: const Offset(0, 4)),
         ],
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(28), child: child),
@@ -364,9 +359,7 @@ Widget _buildBar(BuildContext context, double h, Widget child) {
 class AnimatedBuilder extends AnimatedWidget {
   final Widget Function(BuildContext, Widget?) builder;
   final Widget? child;
-
   const AnimatedBuilder({super.key, required super.listenable, required this.builder, this.child});
-
   @override
   Widget build(BuildContext context) => builder(context, child);
 }

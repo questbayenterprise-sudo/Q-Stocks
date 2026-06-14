@@ -7,6 +7,9 @@ class MorePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userType = UserSession().userType;
+    final isAdminOrOwner = userType == UserType.admin || userType == UserType.owner || userType == UserType.vendor || userType == UserType.manager;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -15,110 +18,89 @@ class MorePage extends StatelessWidget {
               _buildProfileHeader(context),
               const SizedBox(height: 10),
 
-              // First Grouped Section
+              // SECTION 1: CORE BUSINESS
               _buildSectionContainer(context, [
-                // Update this specific tile inside your grouped section
                 _buildMenuTile(
-                  icon: Icons.receipt_long_outlined,
-                  title: "My Bookings",
-                  subtitle: "View Transactions & Receipts",
-                  iconColor: const Color(0xFF00A36C),
-                  onTap: () => context.push('/my-bookings'),
+                  icon: Icons.storefront_outlined,
+                  title: "My Shops",
+                  subtitle: "Manage shop branches and locations",
+                  iconColor: Colors.brown,
+                  onTap: () => context.push('/my-shops'),
                 ),
                 _buildMenuTile(
-                  icon: Icons.favorite_outlined,
-                  title: UserSession().userType == UserType.admin ||
-                          UserSession().userType == UserType.owner ||
-                          UserSession().userType == UserType.vendor ||
-                          UserSession().userType == UserType.manager
-                      ? "Venue Likes"
-                      : "My Favorites",
-                  subtitle: UserSession().userType == UserType.admin ||
-                          UserSession().userType == UserType.owner
-                      ? "View all venue likes"
-                      : "Your liked venues",
-                  iconColor: Colors.red.shade400,
-                  onTap: () => context.push('/liked-venues'),
+                  icon: Icons.shopping_basket_outlined,
+                  title: "Products",
+                  subtitle: "Chicken, Eggs & Inventory items",
+                  iconColor: Colors.orange,
+                  onTap: () => context.push('/products'),
                 ),
                 _buildMenuTile(
-                  icon: Icons.settings_outlined,
-                  title: "Settings",
-                  subtitle: "Privacy, Notifications, Theme",
-                  iconColor: const Color(0xFF00A36C),
-                  onTap: () => context.push('/settings'),
-                  isLast: UserSession().userType != UserType.admin,
+                  icon: Icons.groups_outlined,
+                  title: "Customers",
+                  subtitle: "Ledger notebook and balances",
+                  iconColor: Colors.blue,
+                  onTap: () => context.push('/customers'),
                 ),
-                if (UserSession().userType == UserType.admin)
-                  _buildMenuTile(
-                    icon: Icons.admin_panel_settings_outlined,
-                    title: "General Settings",
-                    subtitle: "OTP, Login, Payment configurations",
-                    iconColor: Colors.deepPurple,
-                    onTap: () => context.push('/admin-settings'),
-                  ),
-                if (UserSession().userType == UserType.admin)
-                  _buildMenuTile(
-                    icon: Icons.people_outlined,
-                    title: "Manage Users",
-                    subtitle: "View, edit roles, delete users",
-                    iconColor: Colors.blue,
-                    onTap: () => context.push('/admin-users'),
-                  ),
-                if (UserSession().userType == UserType.admin)
-                  _buildMenuTile(
-                    icon: Icons.link_outlined,
-                    title: "Venue Mapping",
-                    subtitle: "Assign venues to users",
-                    iconColor: Colors.orange,
-                    onTap: () => context.push('/venue-mapping'),
-                    isLast: true,
-                  ),
-                // _buildMenuTile(
-                //   icon: Icons.group_outlined,
-                //   title: "Playpals",
-                //   subtitle: "View & Manage Players",
-                //   iconColor: const Color(0xFF00A36C),
-                // ),
-                // _buildMenuTile(
-                //   icon: Icons.account_balance_wallet_outlined,
-                //   title: "Passbook",
-                //   subtitle: "Manage Karma, Playo credits, etc",
-                //   iconColor: const Color(0xFF00A36C),
-                // ),
-                // _buildMenuTile(
-                //   icon: Icons.shield_outlined,
-                //   title: "Preference and Privacy",
-                //   subtitle: "Sports, Locations, Notifications, etc",
-                //   iconColor: const Color(0xFF00A36C),
-                //   isLast: true,
-                // ),
+                // INVENTORY DROPDOWN
+                _buildExpansionMenuTile(
+                  context: context,
+                  icon: Icons.inventory_2_outlined,
+                  title: "Inventory",
+                  iconColor: Colors.teal,
+                  children: [
+                    _buildSubMenuTile(
+                      title: "Sales",
+                      icon: Icons.point_of_sale_outlined,
+                      onTap: () => context.push('/inventory/sales'),
+                    ),
+                    _buildSubMenuTile(
+                      title: "Stocks",
+                      icon: Icons.warehouse_outlined,
+                      onTap: () => context.push('/inventory/stocks'),
+                    ),
+                    _buildSubMenuTile(
+                      title: "Reports",
+                      icon: Icons.analytics_outlined,
+                      onTap: () => context.push('/inventory/reports'),
+                    ),
+                  ],
+                ),
               ]),
 
               const SizedBox(height: 15),
 
-              // Second Grouped Section
+              // SECTION 2: ADMINISTRATION
               _buildSectionContainer(context, [
-                // _buildMenuTile(
-                //   icon: Icons.percent_outlined,
-                //   title: "Offers",
-                //   isSimple: true,
-                // ),
-                // _buildMenuTile(
-                //   icon: Icons.article_outlined,
-                //   title: "Blogs",
-                //   isSimple: true,
-                // ),
-                // _buildMenuTile(
-                //   icon: Icons.card_giftcard_outlined,
-                //   title: "Invite & Earn",
-                //   badge: "EARN 50 KARMA",
-                //   isSimple: true,
-                // ),
-                // _buildMenuTile(
-                //   icon: Icons.support_outlined,
-                //   title: "Help & Support",
-                //   isSimple: true,
-                // ),
+                _buildMenuTile(
+                  icon: Icons.settings_outlined,
+                  title: "App Settings",
+                  subtitle: "Notifications and Theme",
+                  iconColor: const Color(0xFF00A36C),
+                  onTap: () => context.push('/settings'),
+                ),
+                if (UserSession().userType == UserType.admin) ...[
+                  _buildMenuTile(
+                    icon: Icons.admin_panel_settings_outlined,
+                    title: "General Settings",
+                    subtitle: "OTP & System Config",
+                    iconColor: Colors.deepPurple,
+                    onTap: () => context.push('/admin-settings'),
+                  ),
+                  _buildMenuTile(
+                    icon: Icons.people_outlined,
+                    title: "Manage Users",
+                    subtitle: "Staff roles and access",
+                    iconColor: Colors.indigo,
+                    onTap: () => context.push('/admin-users'),
+                    isLast: true,
+                  ),
+                ]
+              ]),
+
+              const SizedBox(height: 15),
+
+              // SECTION 3: LOGOUT
+              _buildSectionContainer(context, [
                 _buildMenuTile(
                   icon: Icons.logout,
                   title: "Logout",
@@ -139,6 +121,53 @@ class MorePage extends StatelessWidget {
     );
   }
 
+  // --- HELPER: Expansion Tile for Inventory ---
+  Widget _buildExpansionMenuTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required Color iconColor,
+    required List<Widget> children,
+  }) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+        ),
+        children: children,
+      ),
+    );
+  }
+
+  // --- HELPER: Sub-menu items for Inventory ---
+  Widget _buildSubMenuTile({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.only(left: 70, right: 20),
+      leading: Icon(icon, size: 20, color: Colors.grey),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+      ),
+      trailing: const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+    );
+  }
+
+  // --- Standard Header (Keep yours) ---
   Widget _buildProfileHeader(BuildContext context) {
     final displayName = UserSession().username ?? "User";
     final imageUrl = UserSession().imageUrl;
@@ -152,18 +181,10 @@ class MorePage extends StatelessWidget {
             CircleAvatar(
               radius: 35,
               backgroundColor: const Color(0xFF00A36C).withAlpha(25),
-              backgroundImage: imageUrl != null && imageUrl.isNotEmpty
-                  ? NetworkImage(imageUrl)
-                  : null,
+              backgroundImage: imageUrl != null && imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
               child: imageUrl == null || imageUrl.isEmpty
-                  ? Text(
-                      displayName.isNotEmpty ? displayName[0].toUpperCase() : "U",
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF00A36C),
-                      ),
-                    )
+                  ? Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : "U",
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF00A36C)))
                   : null,
             ),
             const SizedBox(width: 15),
@@ -171,14 +192,8 @@ class MorePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    displayName,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  const Text(
-                    "View your full profile",
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
+                  Text(displayName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const Text("View/Edit Shop Profile", style: TextStyle(color: Colors.grey, fontSize: 14)),
                 ],
               ),
             ),
@@ -196,9 +211,7 @@ class MorePage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-        ),
+        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
       ),
       child: Column(children: children),
     );
@@ -211,17 +224,13 @@ class MorePage extends StatelessWidget {
     Color? iconColor,
     bool isLast = false,
     bool isSimple = false,
-    String? badge,
     VoidCallback? onTap,
   }) {
     return Column(
       children: [
         ListTile(
           onTap: onTap,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -238,44 +247,11 @@ class MorePage extends StatelessWidget {
               color: iconColor == Colors.red ? Colors.red : null,
             ),
           ),
-          subtitle: subtitle != null
-              ? Text(
-                  subtitle,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                )
-              : null,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (badge != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF9C4),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    badge,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.brown,
-                    ),
-                  ),
-                ),
-              Icon(Icons.chevron_right, color: Colors.grey.shade300),
-            ],
-          ),
+          subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13)) : null,
+          trailing: const Icon(Icons.chevron_right, color: Colors.grey),
         ),
-        if (!isLast)
-          const Divider(height: 1, indent: 70),
+        if (!isLast) const Divider(height: 1, indent: 70),
       ],
     );
   }
-
-  // REMOVED: _buildBottomNav helper method has been deleted.
 }

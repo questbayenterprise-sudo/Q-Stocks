@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -25,23 +26,29 @@ class DatabaseHelper {
       onCreate: _createDB,
     );
   }
-
-  Future _createDB(Database db, int version) async {
+Future _createDB(Database db, int version) async {
     try {
       final String script = await rootBundle.loadString('assets/sql/init_db.sql');
-      // Splitting by semicolon followed by a newline is safer for large scripts
+      
+      // Split script into queries
       final List<String> queries = script.split(RegExp(r';\s*\n'));
 
+      // OPTIMIZATION: Use a Batch for massive performance gains
       await db.transaction((txn) async {
+        final batch = txn.batch(); // Create a batch
+        
         for (String query in queries) {
           if (query.trim().isNotEmpty) {
-            await txn.execute(query);
+            batch.execute(query); // Queue the query
           }
         }
+        
+        await batch.commit(noResult: true); // Execute all at once natively
       });
-      print("Database and Seed data initialized successfully.");
+      
+      debugPrint("Database logic finished on background thread.");
     } catch (e) {
-      print("Error during database creation: $e");
+      debugPrint("DB Init Error: $e");
     }
   }
 }

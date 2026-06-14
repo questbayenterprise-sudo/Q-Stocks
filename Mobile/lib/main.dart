@@ -12,72 +12,87 @@ import 'features/auth/Session/user_session.dart';
 // Background message handler
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  // await Firebase.initializeApp();
 }
 
-void main() async {
-  // 1. Initialize Flutter Engine
+void main() {
+  // 1. Ensure bindings are initialized before any plugin calls.
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   final themeProvider = ThemeProvider();
 
-  // 2. Conditional Database Initialization (First Install Logic)
-  if (!AppConfig.isCloudDb) {
-    // Ensures SQLite DB is created and script is run before app starts
-    await DatabaseHelper.instance.database;
-  }
+  // 2. Kick off initialization asynchronously without 'await'ing in main.
+  // This allows the Dart entry point to finish and the Flutter engine to 
+  // begin rendering the first frame immediately, avoiding Choreographer skip warnings.
+  final initFuture = _initApp(themeProvider);
 
-  // 3. Parallel Initialization for Speed (Firebase, Session, Theme)
-  await Future.wait([
-    Firebase.initializeApp(),
-    UserSession().loadSession(),
-    themeProvider.loadTheme(),
-  ]);
-
-  // 4. Set up FCM Background Handler
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  // 5. Launch App (No Global MultiBlocProvider here - using Scoped Providing in Router)
-  runApp(MyApp(themeProvider: themeProvider));
+  runApp(MyApp(
+    themeProvider: themeProvider,
+    initFuture: initFuture,
+  ));
 }
 
-class MyApp extends StatefulWidget {
+Future<void> _initApp(ThemeProvider themeProvider) async {
+  try {
+    // 1. Initialize Firebase (essential for startup)
+    // await Firebase.initializeApp();
+    
+    // 2. Load local sessions and themes
+    await Future.wait([
+      UserSession().loadSession(),
+      themeProvider.loadTheme(),
+    ]);
+
+    // 3. Register background handler with a delay.
+    // spwaning a background isolate immediately can crash emulators due to resource contention.
+    // This allows the main engine to finish its handshake with the debugger.
+    // Future.delayed(const Duration(seconds: 3), () {
+    //   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    // });
+  } catch (e) {
+    debugPrint("App Initialization Error: $e");
+  }
+}
+
+class MyApp extends StatelessWidget {
   final ThemeProvider themeProvider;
-  const MyApp({super.key, required this.themeProvider});
+  final Future<void> initFuture;
 
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-    // Re-build app when theme is toggled
-    widget.themeProvider.addListener(_onThemeChanged);
-  }
-
-  void _onThemeChanged() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    widget.themeProvider.removeListener(_onThemeChanged);
-    super.dispose();
-  }
+  const MyApp({
+    super.key,
+    required this.themeProvider,
+    required this.initFuture,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerConfig: appRouter,
-      debugShowCheckedModeBanner: false,
-      title: 'Broiler Shop Pro',
-      
-      // Fast, Non-animated Themes
-      theme: ThemeProvider.lightTheme,
-      darkTheme: ThemeProvider.darkTheme,
-      themeMode: widget.themeProvider.themeMode,
+    return ListenableBuilder(
+      listenable: themeProvider,
+      builder: (context, _) {
+        return MaterialApp.router(
+          routerConfig: appRouter,
+          debugShowCheckedModeBanner: false,
+          title: 'Broiler Shop Pro',
+          theme: ThemeProvider.lightTheme,
+          darkTheme: ThemeProvider.darkTheme,
+          themeMode: themeProvider.themeMode,
+          // Use the builder to overlay a loading screen while background 
+          // initialization is in progress.
+          builder: (context, child) {
+            return FutureBuilder<void>(
+              future: initFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Material(
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return child ?? const SizedBox.shrink();
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

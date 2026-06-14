@@ -1,15 +1,28 @@
-import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
-import '../../../../core/config/app_config.dart';
 import '../../../auth/Session/user_session.dart';
-import '../../Models/home_data.dart';
-import '../../Repository/dashboard.dart';
+import '../../data/models/home_data.dart';
+import '../../data/repositories/home_repository.dart';
 
+// ============================================================
+// 1. HOME CATEGORY (Simple helper class)
+// ============================================================
+class HomeCategory {
+  final String title;
+  final String description;
+  final String route;
+  HomeCategory({required this.title, required this.description, required this.route});
+}
+
+// ============================================================
+// 2. HOME EVENTS
+// ============================================================
 abstract class HomeEvent {}
 
 class LoadHomeData extends HomeEvent {}
 
+// ============================================================
+// 3. HOME STATES
+// ============================================================
 abstract class HomeState {}
 
 class HomeInitial extends HomeState {}
@@ -18,12 +31,13 @@ class HomeLoading extends HomeState {}
 
 class HomeLoaded extends HomeState {
   final List<HomeCategory> categories;
-  final TurfAnalytics analytics;
-  final List<RecentBooking> recentBookings;
+  final ShopAnalytics analytics;
+  final List<RecentSale> recentSales;
+
   HomeLoaded({
     required this.categories,
     required this.analytics,
-    required this.recentBookings,
+    required this.recentSales,
   });
 }
 
@@ -32,73 +46,64 @@ class HomeError extends HomeState {
   HomeError(this.message);
 }
 
+// ============================================================
+// 4. HOME BLOC
+// ============================================================
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
-  // Hardcode the URL here or in a constants file
-  final String baseUrl = AppConfig.baseUrl;
   final HomeRepository repository = HomeRepository();
 
   HomeBloc() : super(HomeInitial()) {
-    // No repository in constructor anymore
     on<LoadHomeData>((event, emit) async {
       emit(HomeLoading());
- print("--- Home Loading Started ---");
+      
       try {
-        List<HomeCategory> _getStaticCategories() {
-          return [
-            HomeCategory(
-              title: "Bookings",
-              description: "Manage slots",
-              route: "/admin-bookings-full",
-            ),
-            HomeCategory(
-              title: "Courts",
-              description: "Check status",
-              route: "/courts",
-            ),
-            HomeCategory(
-              title: "Payments",
-              description: "Revenue",
-              route: "/revenue",
-            ),
-            HomeCategory(
-              title: "Customers",
-              description: "Database",
-              route: "/players",
-            ),
-          ];
-        }
-
         final session = UserSession();
-        final userId = session.userId;
+        final userId = session.userId ?? '0';
         final userType = session.userType?.name ?? 'user';
-        if (userId == null) {
-                print("Error: UserID is null");
 
-          return;
-        }
-        // Static Categories
-
+        // Fetch data from local/cloud repository in parallel
         final results = await Future.wait([
           repository.fetchAnalytics(userId, userType),
-          repository.fetchRecentBookings(userId, userType),
+          repository.fetchRecentSales(),
         ]);
 
-        final analytics = results[0] as TurfAnalytics;
-        final bookings = results[1] as List<RecentBooking>;
-  print("Data fetched successfully!"); 
-        emit(
-          HomeLoaded(
-            categories: _getStaticCategories(),
-            analytics: analytics,
-            recentBookings: bookings,
-          ),
-        );
-      } catch (e, stacktrace) {
-    // THIS IS THE MOST IMPORTANT PART
-    print("CRITICAL ERROR: $e"); 
-    print("STACKTRACE: $stacktrace"); 
-    emit(HomeError(e.toString()));
-  }
+        final analytics = results[0] as ShopAnalytics;
+        final sales = results[1] as List<RecentSale>;
+
+        emit(HomeLoaded(
+          categories: _getStaticCategories(),
+          analytics: analytics,
+          recentSales: sales,
+        ));
+      } catch (e) {
+        emit(HomeError(e.toString()));
+      }
     });
+  }
+
+  // Static menu items for the dashboard grid
+  List<HomeCategory> _getStaticCategories() {
+    return [
+      HomeCategory(
+        title: "Products",
+        description: "Chicken, Eggs & Items",
+        route: "/products",
+      ),
+      HomeCategory(
+        title: "Ledger",
+        description: "Customer Notebook",
+        route: "/customers",
+      ),
+      HomeCategory(
+        title: "Inventory",
+        description: "Stock Status",
+        route: "/inventory/stocks",
+      ),
+      HomeCategory(
+        title: "Reports",
+        description: "Sales & Profit",
+        route: "/inventory/reports",
+      ),
+    ];
   }
 }

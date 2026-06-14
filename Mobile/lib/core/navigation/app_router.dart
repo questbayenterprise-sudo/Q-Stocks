@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../features/auth/pages/Login/signup_page.dart';
 
 // --- Auth Imports ---
 import '../../features/auth/Session/user_session.dart';
@@ -10,53 +9,40 @@ import '../../features/auth/pages/Login/otp_page.dart';
 import '../../features/auth/pages/Login/signup_page.dart';
 import '../../features/auth/pages/Login/Owner_Onboarding_Page.dart';
 
-// --- Home Imports ---
-import '../../../features/home/presentation/pages/home_page.dart';
-import '../../../features/home/presentation/pages/admin_bookings_full_page.dart';
+// --- Home / Dashboard ---
+import '../../../features/home/presentation/pages/dashboard_page.dart';
+import '../../../features/home/presentation/bloc/home_bloc.dart';
 
-// --- Venue Imports ---
-import '../../../features/venues/domain/entities/venue.dart';
-import '../../../features/venues/presentation/pages/venue_list_page.dart';
-import '../../../features/venues/presentation/pages/venue_detail_page.dart';
-import '../../../features/venues/presentation/pages/add_venue_page.dart';
+// --- Shop & Product Management ---
+import '../../features/shops/presentation/pages/my_shop_list_page.dart'; // Your refactored MyVenueListPage
+import '../../features/shops/presentation/pages/add_shop_page.dart';    // Your refactored MyAddVenuePage
+import '../../features/shops/presentation/bloc/shop_bloc.dart';
+import '../../../features/products/presentation/pages/product_list_page.dart';
 
-// --- Other Feature Imports ---
-import '../../../features/games/presentation/pages/calendar_page.dart';
-import '../../../features/trainers/presentation/pages/trainers_page.dart';
-import '../../../features/chat/presentation/pages/conversations_page.dart';
-import '../../../features/notifications/presentation/pages/alerts_page.dart';
+// --- Customer & Ledger ---
+import '../../../features/customers/presentation/pages/customer_list_page.dart';
+import '../../../features/customers/presentation/pages/customer_ledger_page.dart';
+
+// --- Inventory Dropdown Routes ---
+import '../../../features/inventory/presentation/pages/sales_page.dart';
+import '../../../features/inventory/presentation/pages/stocks_page.dart';
+import '../../../features/inventory/presentation/pages/reports_page.dart';
+
+// --- Profile & Settings ---
 import '../../../features/profile/presentation/pages/more_page.dart';
-import '../../features/profile/presentation/pages/about_page.dart';
-import '../../features/profile/presentation/pages/change_password_page.dart';
-import '../../features/profile/presentation/pages/delete_account_page.dart';
-import '../../features/profile/presentation/pages/help_center_page.dart';
-import '../../../features/profile/presentation/pages/Language_Page.dart';
-import '../../features/profile/presentation/pages/privacy_policy_page.dart';
 import '../../../features/profile/presentation/pages/edit_profile_page.dart';
-import '../../features/profile/presentation/pages/select_location_page.dart';
-import '../../features/likes/presentation/pages/liked_venues_page.dart';
-import '../../../features/profile/presentation/pages/my_bookings_page.dart';
 import '../../../features/profile/presentation/pages/settings_page.dart';
-import '../../features/profile/presentation/pages/admin_settings_page.dart';
 import '../../features/profile/presentation/pages/admin_users_page.dart';
-import '../../features/profile/presentation/pages/venue_mapping_page.dart';
-
-// --- My Venues Imports ---
-import '../../features/My Venues/presentation/pages/venue_list_page.dart';
-import '../../features/My Venues/presentation/pages/add_venue_page.dart';
-import '../../features/My Venues/presentation/pages/venue_detail_page.dart';
-import '../../features/My Venues/domain/entities/venue.dart';
+import '../../features/profile/presentation/pages/admin_settings_page.dart';
 
 // --- Widgets ---
 import '../../../core/widgets/custom_bottom_nav.dart';
-import '../../features/venues/data/repositories/venue_repository.dart';
-import '../../features/venues/presentation/bloc/venue_bloc.dart';
+import '../../../features/products/presentation/bloc/product_bloc.dart';
+import '../../../features/customers/presentation/bloc/customer_bloc.dart';
+// --- Guards ---
+const _adminOnlyRoutes = {'/admin-settings', '/admin-users', '/shop-mapping'};
 
-// --- Role-based route sets ---
-const _adminOnlyRoutes = {'/admin-settings', '/admin-bookings-full', '/admin-users', '/venue-mapping'};
-const _managementRoutes = {'/Myvenues', '/my-add-venue', '/my-venue-detail'};
-
-bool _isAdminOrOwner(UserType? type) =>
+bool _isManagement(UserType? type) =>
     type == UserType.admin ||
     type == UserType.owner ||
     type == UserType.vendor ||
@@ -70,161 +56,98 @@ final GoRouter appRouter = GoRouter(
     final isAuthRoute = state.matchedLocation == '/';
     final path = state.matchedLocation;
 
-    if (isLoggedIn && isAuthRoute) {
-      return '/home';
-    }
+    if (isLoggedIn && isAuthRoute) return '/home';
 
-    // Admin-only route guard
     if (_adminOnlyRoutes.contains(path) && session.userType != UserType.admin) {
       return '/home';
     }
-
-    // Management route guard (admin + owner/vendor/manager)
-    if (_managementRoutes.contains(path) && !_isAdminOrOwner(session.userType)) {
-      return '/venues';
-    }
-
     return null;
   },
   routes: [
-    // Routes WITHOUT Bottom Navigation Bar
+    // 1. Auth Routes
     GoRoute(path: '/', builder: (context, state) => const AuthEntryPage()),
-
-    // GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
+    GoRoute(path: '/signup', builder: (context, state) => const SignUpPage()),
     GoRoute(
       path: '/otp',
       builder: (context, state) {
-        // Cast to Map<String, dynamic> to handle the data safely
         final data = state.extra as Map<String, dynamic>?;
-
         return OtpPage(
           email: data?['email'] ?? '',
-          // Change 'phone:' to 'phoneNumber:' to match your OtpPage constructor
           phoneNumber: data?['phone'] ?? '',
         );
       },
     ),
-    GoRoute(
-      path: '/conversations',
-      builder: (context, state) => const ConversationsPage(),
-    ),
-    GoRoute(path: '/alerts', builder: (context, state) => const AlertsPage()),
-    GoRoute(path: '/liked-venues', builder: (context, state) => const LikedVenuesPage()),
-     GoRoute(
-      path: '/venue-detail',
-      builder: (context, state) {
-        final venue = state.extra as VenueEntity;
-        return VenueDetailPage(venue: venue);
-      },
-    ),
-    GoRoute(
-      path: '/my-venue-detail',
-      builder: (context, state) {
-        final venue = state.extra as MyVenueEntity;
-        return MyVenueDetailPage(venue: venue);
-      },
-    ),
 
-    // Routes WITH Bottom Navigation Bar
+    // 2. Main App Shell
     ShellRoute(
-      builder: (context, state, child) =>
-          Scaffold(body: child, bottomNavigationBar: const CustomBottomNav()),
+      builder: (context, state, child) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (context) => HomeBloc()),
+          BlocProvider(create: (context) => ShopBloc()),
+          // FIXED: Added these so the Product and Customer pages work!
+          BlocProvider(create: (context) => ProductBloc()), 
+          BlocProvider(create: (context) => CustomerBloc()),
+        ],
+        child: Scaffold(
+          body: child, 
+          bottomNavigationBar: const CustomBottomNav()
+        ),
+      ),
       routes: [
         GoRoute(
           path: '/home',
-          builder: (context, state) => const HomePage(),
+          builder: (context, state) => const DashboardPage(),
         ),
+
+        // Product Catalog (General view)
         GoRoute(
-          path: '/games',
-          builder: (context, state) => const CalendarPage(),
+          path: '/products',
+          builder: (context, state) => const ProductListPage(),
         ),
+
+        // FIXED: Changed /shops to MyShopListPage (The management list)
         GoRoute(
-          path: '/trainers',
-          builder: (context, state) => const TrainersPage(),
+          path: '/my-shops', // Use the path your Bottom Nav calls
+          builder: (context, state) => const MyShopListPage(), 
         ),
+        
+        // This handles the generic '/shops' if your Nav is still calling that
         GoRoute(
-  path: '/venues',
-  builder: (context, state) => BlocProvider(
-    create: (context) => VenueBloc(VenueRepository()), // Bloc exists ONLY for this route
-    child: const VenueListPage(),
-  ),
-),
-           GoRoute(
-          path: '/Myvenues',
-          builder: (context, state) => const MyVenueListPage(),
+          path: '/shops',
+          builder: (context, state) => const MyShopListPage(),
         ),
+
+        GoRoute(
+          path: '/add-shop',
+          builder: (context, state) => const AddShopPage(),
+        ),
+
+        // Customer Ledger
+        GoRoute(
+          path: '/customers',
+          builder: (context, state) => const CustomerListPage(),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) => CustomerLedgerPage(
+                customerId: state.pathParameters['id']!,
+              ),
+            ),
+          ],
+        ),
+
+        // Inventory
+        GoRoute(path: '/inventory/sales', builder: (context, state) => const SalesPage()),
+        GoRoute(path: '/inventory/stocks', builder: (context, state) => const StocksPage()),
+        GoRoute(path: '/inventory/reports', builder: (context, state) => const ReportsPage()),
+
+        // Settings
         GoRoute(path: '/more', builder: (context, state) => const MorePage()),
-        GoRoute(
-          path: '/add-venue',
-          builder: (context, state) {
-            final venue = state.extra as VenueEntity?;
-            return AddVenuePage(initialVenue: venue);
-          },
-        ),
-        GoRoute(
-          path: '/my-add-venue',
-          builder: (context, state) {
-            final venue = state.extra as MyVenueEntity?;
-            return MyAddVenuePage(initialVenue: venue);
-          },
-        ),
-        GoRoute(
-          path: '/edit-profile',
-          builder: (context, state) => const EditProfilePage(),
-        ),
-        GoRoute(
-          path: '/my-bookings',
-          builder: (context, state) => const MyBookingsPage(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (context, state) => const SettingsPage(),
-        ),
-        GoRoute(
-          path: '/change-password',
-          builder: (context, state) => const ChangePasswordPage(),
-        ),
-        GoRoute(
-          path: '/language',
-          builder: (context, state) => const LanguagePage(),
-        ),
-        GoRoute(
-          path: '/privacy-policy',
-          builder: (context, state) => const PrivacyPolicyPage(),
-        ),
-        GoRoute(
-          path: '/delete-account',
-          builder: (context, state) => const DeleteAccountPage(),
-        ),
-        GoRoute(
-          path: '/help-center',
-          builder: (context, state) => const HelpCenterPage(),
-        ),
-        GoRoute(path: '/about', builder: (context, state) => const AboutPage()),
-        GoRoute(
-          path: '/admin-settings',
-          builder: (context, state) => const AdminSettingsPage(),
-        ),
-        GoRoute(
-          path: '/admin-users',
-          builder: (context, state) => const AdminUsersPage(),
-        ),
-        GoRoute(
-          path: '/venue-mapping',
-          builder: (context, state) => const VenueMappingPage(),
-        ),
-        GoRoute(
-          path: '/select-location',
-          builder: (context, state) => const SelectLocationPage(),
-        ),
-        GoRoute(
-          path: '/admin-bookings-full',
-          builder: (context, state) => const AdminBookingsFullPage(),
-        ),
-        GoRoute(
-          path: '/owner-onboarding',
-          builder: (context, state) => const OwnerOnboardingPage(),
-        ),
+        GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfilePage()),
+        GoRoute(path: '/settings', builder: (context, state) => const SettingsPage()),
+        
+        GoRoute(path: '/admin-settings', builder: (context, state) => const AdminSettingsPage()),
+        GoRoute(path: '/admin-users', builder: (context, state) => const AdminUsersPage()),
       ],
     ),
   ],
