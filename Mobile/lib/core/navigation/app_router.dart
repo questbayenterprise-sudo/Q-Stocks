@@ -7,26 +7,33 @@ import '../../features/auth/Session/user_session.dart';
 import '../../features/auth/pages/Login/auth_entry_page.dart';
 import '../../features/auth/pages/Login/otp_page.dart';
 import '../../features/auth/pages/Login/signup_page.dart';
-import '../../features/auth/pages/Login/Owner_Onboarding_Page.dart';
 
 // --- Home / Dashboard ---
 import '../../../features/home/presentation/pages/dashboard_page.dart';
 import '../../../features/home/presentation/bloc/home_bloc.dart';
 
-// --- Shop & Product Management ---
-import '../../features/shops/presentation/pages/my_shop_list_page.dart'; // Your refactored MyVenueListPage
-import '../../features/shops/presentation/pages/add_shop_page.dart';    // Your refactored MyAddVenuePage
+// --- Shop Management ---
+import '../../features/shops/data/models/shop_model.dart';
+import '../../features/shops/presentation/pages/my_shop_list_page.dart';
+import '../../features/shops/presentation/pages/add_shop_page.dart';
 import '../../features/shops/presentation/bloc/shop_bloc.dart';
-import '../../../features/products/presentation/pages/product_list_page.dart';
 
-// --- Customer & Ledger ---
+// --- Product Management ---
+import '../../features/products/data/models/product_model.dart';
+import '../../features/products/presentation/pages/product_list_page.dart';
+import '../../features/products/presentation/pages/add_product_page.dart';
+import '../../../features/products/presentation/bloc/product_bloc.dart';
+
+// --- Customer & Ledger Management ---
 import '../../../features/customers/presentation/pages/customer_list_page.dart';
 import '../../../features/customers/presentation/pages/customer_ledger_page.dart';
+import '../../../features/customers/presentation/bloc/customer_bloc.dart';
 
-// --- Inventory Dropdown Routes ---
+// --- Inventory (Sales, Stocks, Reports) ---
 import '../../../features/inventory/presentation/pages/sales_page.dart';
 import '../../../features/inventory/presentation/pages/stocks_page.dart';
 import '../../../features/inventory/presentation/pages/reports_page.dart';
+import '../../../features/inventory/presentation/bloc/inventory_bloc.dart';
 
 // --- Profile & Settings ---
 import '../../../features/profile/presentation/pages/more_page.dart';
@@ -37,16 +44,9 @@ import '../../features/profile/presentation/pages/admin_settings_page.dart';
 
 // --- Widgets ---
 import '../../../core/widgets/custom_bottom_nav.dart';
-import '../../../features/products/presentation/bloc/product_bloc.dart';
-import '../../../features/customers/presentation/bloc/customer_bloc.dart';
-// --- Guards ---
-const _adminOnlyRoutes = {'/admin-settings', '/admin-users', '/shop-mapping'};
 
-bool _isManagement(UserType? type) =>
-    type == UserType.admin ||
-    type == UserType.owner ||
-    type == UserType.vendor ||
-    type == UserType.manager;
+// --- Guards Configuration ---
+const _adminOnlyRoutes = {'/admin-settings', '/admin-users', '/shop-mapping'};
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -56,15 +56,17 @@ final GoRouter appRouter = GoRouter(
     final isAuthRoute = state.matchedLocation == '/';
     final path = state.matchedLocation;
 
+    // If logged in and on login page, go to dashboard
     if (isLoggedIn && isAuthRoute) return '/home';
 
+    // Restrict Admin-only routes
     if (_adminOnlyRoutes.contains(path) && session.userType != UserType.admin) {
       return '/home';
     }
     return null;
   },
   routes: [
-    // 1. Auth Routes
+    // 1. AUTH FLOW (No Bottom Nav)
     GoRoute(path: '/', builder: (context, state) => const AuthEntryPage()),
     GoRoute(path: '/signup', builder: (context, state) => const SignUpPage()),
     GoRoute(
@@ -78,15 +80,15 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // 2. Main App Shell
+    // 2. MAIN APP FLOW (With Bottom Nav & Scoped Blocs)
     ShellRoute(
       builder: (context, state, child) => MultiBlocProvider(
         providers: [
           BlocProvider(create: (context) => HomeBloc()),
           BlocProvider(create: (context) => ShopBloc()),
-          // FIXED: Added these so the Product and Customer pages work!
           BlocProvider(create: (context) => ProductBloc()), 
           BlocProvider(create: (context) => CustomerBloc()),
+          BlocProvider(create: (context) => InventoryBloc()), 
         ],
         child: Scaffold(
           body: child, 
@@ -94,41 +96,47 @@ final GoRouter appRouter = GoRouter(
         ),
       ),
       routes: [
+        // Dashboard / Home
         GoRoute(
           path: '/home',
           builder: (context, state) => const DashboardPage(),
         ),
 
-        // Product Catalog (General view)
+        // Products Tab
         GoRoute(
           path: '/products',
           builder: (context, state) => const ProductListPage(),
         ),
-
-        // FIXED: Changed /shops to MyShopListPage (The management list)
         GoRoute(
-          path: '/my-shops', // Use the path your Bottom Nav calls
-          builder: (context, state) => const MyShopListPage(), 
+          path: '/add-product',
+          builder: (context, state) => AddProductPage(
+            initialProduct: state.extra as ProductModel?,
+          ),
         ),
-        
-        // This handles the generic '/shops' if your Nav is still calling that
+
+        // Shop Management Tab
         GoRoute(
-          path: '/shops',
+          path: '/my-shops',
           builder: (context, state) => const MyShopListPage(),
         ),
-
+        GoRoute(
+          path: '/shops', // Alias for /my-shops
+          builder: (context, state) => const MyShopListPage(),
+        ),
         GoRoute(
           path: '/add-shop',
-          builder: (context, state) => const AddShopPage(),
+          builder: (context, state) => AddShopPage(
+            initialShop: state.extra as ShopModel?,
+          ),
         ),
 
-        // Customer Ledger
+        // Customers & Ledger Tab
         GoRoute(
           path: '/customers',
           builder: (context, state) => const CustomerListPage(),
           routes: [
             GoRoute(
-              path: ':id',
+              path: ':id', // Deep link to specific ledger: /customers/101
               builder: (context, state) => CustomerLedgerPage(
                 customerId: state.pathParameters['id']!,
               ),
@@ -136,16 +144,17 @@ final GoRouter appRouter = GoRouter(
           ],
         ),
 
-        // Inventory
+        // Inventory Sub-Routes (Dropdown logic)
         GoRoute(path: '/inventory/sales', builder: (context, state) => const SalesPage()),
         GoRoute(path: '/inventory/stocks', builder: (context, state) => const StocksPage()),
         GoRoute(path: '/inventory/reports', builder: (context, state) => const ReportsPage()),
 
-        // Settings
+        // Settings / More Tab
         GoRoute(path: '/more', builder: (context, state) => const MorePage()),
         GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfilePage()),
         GoRoute(path: '/settings', builder: (context, state) => const SettingsPage()),
         
+        // Admin Protected Routes
         GoRoute(path: '/admin-settings', builder: (context, state) => const AdminSettingsPage()),
         GoRoute(path: '/admin-users', builder: (context, state) => const AdminUsersPage()),
       ],

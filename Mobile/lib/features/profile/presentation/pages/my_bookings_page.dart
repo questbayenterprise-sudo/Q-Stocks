@@ -22,7 +22,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
   List<Booking> _bookings = [];
   final TextEditingController _searchController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final IBookingRepository repository = BookingRepositoryImpl();
+  final IBookingRepository repository = BookingRepositoryImpl() as IBookingRepository;
   String? currentId = UserSession().userId;
 
   // ── Filter state ──

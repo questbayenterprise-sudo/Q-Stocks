@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:q_play/features/auth/Session/user_session.dart';
 import '../../../../core/config/app_config.dart';
+import '../../../auth/Session/user_session.dart';
 import '../../domain/entities/venue.dart';
 import '../models/venue_model.dart';
 

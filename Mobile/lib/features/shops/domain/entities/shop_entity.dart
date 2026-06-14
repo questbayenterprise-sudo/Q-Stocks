@@ -3,8 +3,7 @@ class ShopEntity {
   final String name;
   final String imageUrl;
   final String locationName;
-  final double price;
-  final String description;
+  final String description; // Removed price here
   final String? createdBy;
 
   ShopEntity({
@@ -12,7 +11,6 @@ class ShopEntity {
     required this.name,
     required this.imageUrl,
     required this.locationName,
-    required this.price,
     required this.description,
     this.createdBy,
   });

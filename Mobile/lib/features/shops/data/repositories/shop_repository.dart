@@ -70,7 +70,6 @@ class ShopRepository {
       request.fields['userid'] = currentUserId;
       request.fields['name'] = shop.name;
       request.fields['location'] = shop.locationName;
-      request.fields['price'] = shop.price.toString();
       request.fields['description'] = shop.description;
 
       if (shop.imageUrl.isNotEmpty && File(shop.imageUrl).existsSync()) {

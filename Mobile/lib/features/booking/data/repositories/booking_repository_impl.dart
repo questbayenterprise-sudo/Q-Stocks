@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
-import 'package:q_play/core/config/app_config.dart';
+import '../../../../core/config/app_config.dart';
 import '../../domain/entities/booked_slot.dart';
 import '../../domain/entities/booking_info.dart';
 import '../../domain/entities/booking_request.dart';
@@ -32,6 +32,11 @@ final response = await http.post(
     if (response.statusCode != 200) {
       throw Exception('Failed to validate user');
     }
+  }
+
+  @override
+  Future<List<dynamic>?> fetchBookingHistory(String? userId, {String? userType}) async {
+    return null; // Placeholder for history logic in this repository
   }
 
   Future<Map<String, dynamic>?> createBooking(BookingRequest request) async {
@@ -74,7 +79,7 @@ final response = await http.post(
 // lib/features/booking/data/repositories/booking_repository_impl.dart
 
 @override
-Future<bool> CheckAvailability(String date, String start, String end, String venueId) async {
+Future<bool> checkAvailability(String date, String start, String end, String venueId) async {
 final response = await http.post(
   Uri.parse("$baseUrl/api/check-availability"),
   headers: {'Content-Type': 'application/json'},
@@ -93,7 +98,7 @@ final response = await http.post(
   return false;
 }
 
-Future<List<BookedSlot>> getExistingBookings(String date, String venueId) async {
+Future<List<BookedSlot>> _getMockBookings(String date, String venueId) async {
   // Mocking API call for existing bookings
   return [
     BookedSlot(startTime: "09:00 AM", endTime: "10:00 AM", userName: "Rahul"),
@@ -124,7 +129,8 @@ Future<List<BookedSlot>> getExistingBookings(String date, String venueId) async 
         throw Exception("Server Error: ${response.statusCode}");
       }
     } catch (e) {
-      return []; // Return empty list on error to prevent UI crash
+      debugPrint("fetchVenueSlots Error: $e");
+      return []; 
     }
   }
  // lib/features/booking/data/repositories/booking_repository_impl.dart
@@ -138,7 +144,7 @@ Future<List<Map<String, dynamic>>> fetchExistingBookings(String venueId, String 
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "venue_id": venueId, // Ensure key matches Go struct
-        "date": date        // Expecting "YYYY-MM-DD"
+        "date": date
       }),
     );
 
@@ -150,7 +156,8 @@ Future<List<Map<String, dynamic>>> fetchExistingBookings(String venueId, String 
       }
     }
   } catch (e) {
-    debugPrint("Repository Error: $e");
+    debugPrint("fetchExistingBookings Error: $e");
+    rethrow; // Better to rethrow so the Bloc/Provider can show an error state
   }
   return []; 
 }

@@ -68,18 +68,15 @@ CREATE TABLE IF NOT EXISTS payment_modes (
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS shops (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     location TEXT NOT NULL,
-    city_id INTEGER,
-    contact_phone TEXT,
+    description TEXT,             
+    image_url TEXT,               
     is_active INTEGER DEFAULT 1,
     created_by INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (city_id) REFERENCES cities(id),
-    FOREIGN KEY (created_by) REFERENCES users(id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS shop_user_mapping (
@@ -258,3 +255,32 @@ INSERT INTO user_roles (user_id, role_id)
 SELECT u.id, r.id 
 FROM users u, roles r 
 WHERE u.email = 'subhashbalajims@gmail.com' AND r.role_name = 'admin';
+
+-- 8. PRODUCT SEED DATA
+-- Linked to Category 1 (Broiler Chicken)
+INSERT INTO products (name, category_id, uom, base_price, is_active) 
+VALUES ('Full Chicken (With Skin)', 1, 'KG', 140.0, 1);
+
+INSERT INTO products (name, category_id, uom, base_price, is_active) 
+VALUES ('Skinless Chicken', 1, 'KG', 160.0, 1);
+
+-- Linked to Category 2 (Country Chicken)
+INSERT INTO products (name, category_id, uom, base_price, is_active) 
+VALUES ('Nattu Kozhi (Whole)', 2, 'KG', 350.0, 1);
+
+-- Linked to Category 3 (Eggs)
+INSERT INTO products (name, category_id, uom, base_price, is_active) 
+VALUES ('Farm Fresh Eggs', 3, 'Piece', 6.5, 1);
+
+
+-- 9. SHOP SEED DATA (So you have a default shop to test)
+INSERT INTO shops (name, location, description, is_active, created_by)
+VALUES ('Main Branch', 'Mannargudi', 'Primary retail outlet', 1, 1);
+
+-- Auto-map Admin to the Default Shop
+INSERT INTO shop_user_mapping (user_id, shop_id, is_active) VALUES (1, 1, 1);
+
+
+-- 10. CUSTOMER SEED DATA (For the Sales Dropdown)
+INSERT INTO customers (name, phone, address, current_balance) 
+VALUES ('Walk-in Customer', '0000000000', 'Counter Sale', 0.0);
