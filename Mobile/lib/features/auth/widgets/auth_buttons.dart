@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class AuthPrimaryButton extends StatelessWidget {
@@ -46,8 +45,7 @@ class AuthPrimaryButton extends StatelessWidget {
 
 class AuthSecondaryButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
-
+  final VoidCallback? onPressed;
   const AuthSecondaryButton({required this.text, required this.onPressed});
 
   @override
@@ -110,6 +108,7 @@ class CountryPicker extends StatelessWidget {
     );
   }
 }
+
 class AuthSegmentedToggle extends StatelessWidget {
   final bool isSignIn;
   final Function(bool) onChanged;
@@ -129,13 +128,23 @@ class AuthSegmentedToggle extends StatelessWidget {
       child: Row(
         children: [
           _buildToggleTab(context, "Sign In", isSignIn, () => onChanged(true)),
-          _buildToggleTab(context, "Create Account", !isSignIn, () => onChanged(false)),
+          _buildToggleTab(
+            context,
+            "Create Account",
+            !isSignIn,
+            () => onChanged(false),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildToggleTab(BuildContext context, String title, bool isSelected, VoidCallback onTap) {
+  Widget _buildToggleTab(
+    BuildContext context,
+    String title,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: GestureDetector(

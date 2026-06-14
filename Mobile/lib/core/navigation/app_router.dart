@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/auth/pages/Login/signup_page.dart';
 
 // --- Auth Imports ---
 import '../../features/auth/Session/user_session.dart';
@@ -89,7 +90,7 @@ final GoRouter appRouter = GoRouter(
     // Routes WITHOUT Bottom Navigation Bar
     GoRoute(path: '/', builder: (context, state) => const AuthEntryPage()),
 
-    GoRoute(path: '/signup', builder: (context, state) => const SignUpPage()),
+    // GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
     GoRoute(
       path: '/otp',
       builder: (context, state) {

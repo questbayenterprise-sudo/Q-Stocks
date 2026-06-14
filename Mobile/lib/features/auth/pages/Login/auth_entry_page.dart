@@ -9,7 +9,7 @@ import '../../widgets/auth_buttons.dart';
 import 'auth_header.dart';
 import 'signin_view.dart';
 import 'signup_view.dart';
-
+import '../../data/repositories/auth_repository.dart';
 class AuthEntryPage extends StatefulWidget {
   const AuthEntryPage({super.key});
 
@@ -20,7 +20,7 @@ class AuthEntryPage extends StatefulWidget {
 class _AuthEntryPageState extends State<AuthEntryPage> {
   bool _isSignIn = true;
   final String baseUrl = AppConfig.baseUrl;
-
+final AuthRepository _authRepo = AuthRepository();
   final TextEditingController _mobileController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
@@ -135,6 +135,7 @@ Future<void> _registerUser() async {
       }
     });
   }
+   
 /// Returns null if OTP was sent normally, or a Map with user data if OTP was skipped.
 Future<Map<String, dynamic>?> _sendOTP() async {
   final url = Uri.parse("$baseUrl/Send_OTP");
@@ -166,69 +167,68 @@ Future<Map<String, dynamic>?> _sendOTP() async {
 }
 
   void _handleAuthSubmit() async {
-    if (_isValid) {
-      if (_isSignIn) {
-        setState(() => _isLoading = true);
-        try {
-          final otpResult = await _sendOTP();
-          if (!mounted) return;
-          if (otpResult != null) {
-            // OTP skipped — auto-login with returned user data
-            await UserSession().saveSession(
-              otpResult['id'].toString(),
-              otpResult['username']?.toString(),
-              otpResult['usertype']?.toString(),
-            );
-            await FcmService.init();
-            if (mounted) context.go('/home');
-          } else {
-            // OTP sent normally — navigate to OTP page
-            context.push(
-              '/otp',
-              extra: {
-                'email': _emailController.text.trim(),
-                'phone': "",
-                'isSignIn': true,
-              },
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(e.toString())),
-            );
-          }
-        } finally {
-          if (mounted) setState(() => _isLoading = false);
-        }
+  if (!_isValid) return;
+
+  setState(() => _isLoading = true);
+  final email = _emailController.text.trim();
+  final phone = "$_selectedCountryCode${_mobileController.text.trim()}";
+  final username = _usernameController.text.trim().isEmpty 
+      ? email.split('@')[0] 
+      : _usernameController.text.trim();
+
+  try {
+    if (_isSignIn) {
+      // --- FIXED LOGIC ---
+      // 1. Call the signIn method which checks tbl_general_settings
+      final result = await _authRepo.signIn(email);
+      
+      // 2. Pass the result to _processAuthResult (this handles the skip/otp redirection)
+      await _processAuthResult(result, email, phone, true);
+      
+    } else {
+      // --- SIGN UP ---
+      final result = await _authRepo.signUp(
+        username: username,
+        email: email,
+        phone: phone,
+      );
+      
+      if (result['success'] == true) {
+        await _processAuthResult(result, email, phone, false);
       } else {
-        // Logic for Create Account
-        setState(() => _isLoading = true);
-        try {
-          await _registerUser();
-
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Account created successfully!")),
-          );
-
-          // After successful DB creation, proceed to OTP
-          context.push(
-            '/otp',
-            extra: {
-              'email': _emailController.text.trim(),
-              'phone': "$_selectedCountryCode${_mobileController.text.trim()}",
-              'isSignIn': false,
-            },
-          );
-        } catch (e) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(e.toString())));
-        } finally {
-          setState(() => _isLoading = false);
-        }
+        throw Exception(result['message'] ?? "Registration failed");
       }
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
+  }
+}
+/// Shared logic to handle successful login or signup
+  Future<void> _processAuthResult(Map<String, dynamic>? result, String email, String phone, bool isSignIn) async {
+    if (result == null) return;
+
+    // If OTP is disabled or it's a Local DB
+    if (result['otp_skipped'] == true || !AppConfig.isCloudDb) {
+      final userData = result['data'];
+      await UserSession().saveSession(
+        userData['id'].toString(),
+        userData['username']?.toString(),
+        userData['usertype']?.toString() ?? 'Customer',
+      );
+      
+      // If cloud, init FCM. If local, usually not needed immediately.
+      if (AppConfig.isCloudDb) await FcmService.init();
+      
+      if (mounted) context.go('/home');
+    } else {
+      // Proceed to OTP (Only happens in Cloud mode if OTP is enabled)
+      context.push('/otp', extra: {
+        'email': email,
+        'phone': phone,
+        'isSignIn': isSignIn,
+      });
     }
   }
 
@@ -312,25 +312,19 @@ Future<Map<String, dynamic>?> _sendOTP() async {
               ),
             ),
 
-            // --- Skip Button Component ---
-            Positioned(
-              top: 10,
-              right: 16,
-              child: TextButton(
-                onPressed: () async {
-                  await UserSession().saveSession('', 'Guest', 'guest');
-                  if (context.mounted) context.go('/venues');
-                },
-                child: const Text(
-                  "Skip",
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+            // // --- Skip Button Component ---
+            // Positioned(
+            //   top: 10,
+            //   right: 16,
+            //   child: TextButton(
+            //     onPressed: () async {
+            //       // Save as guest and go home
+            //       await UserSession().saveSession('0', 'Guest', 'guest');
+            //       if (context.mounted) context.go('/home'); // Changed from /venues to /home
+            //     },
+            //     child: const Text("Skip", style: TextStyle(color: Colors.grey, fontSize: 16)),
+            //   ),
+            // ),
           ],
         ),
       ),

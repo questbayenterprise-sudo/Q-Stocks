@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
 import '../../widgets/auth_buttons.dart';
 
 class SignInView extends StatelessWidget {
@@ -17,6 +15,7 @@ class SignInView extends StatelessWidget {
   final VoidCallback onSwitchMode;
 
   const SignInView({
+    super.key,
     required this.emailController,
     required this.usernameController,
     required this.mobileController,
@@ -35,113 +34,133 @@ class SignInView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- Header Section ---
         const Text(
           "Welcome Back!",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1A1A1A),
+            letterSpacing: -0.5,
+          ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          "Sign in to manage your shop inventory, track daily sales, and update customer ledgers.",
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey.shade600,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 36),
+
+        // --- Input Fields ---
+        _buildSignInFields(),
+
         const SizedBox(height: 32),
-        _buildTextFieldssignin(),
-        const SizedBox(height: 32),
+
+        // --- Action Buttons ---
         AuthPrimaryButton(
           text: "Sign In",
           isLoading: isLoading,
+          // Disables button if input is invalid or currently processing
           onPressed: isValid && !isLoading ? onSubmit : null,
         ),
-        const SizedBox(height: 24),
-        Center(
-          child: Text("or", style: TextStyle(color: Colors.grey.shade600)),
-        ),
-        const SizedBox(height: 24),
-        AuthSecondaryButton(
-          text: "New here? Create Account",
-          onPressed: onSwitchMode,
-        ),
-      ],
-    );
-  }
 
-  Widget _buildTextFields() {
-    return Column(
-      children: [
-        TextFormField(
-          controller: usernameController,
-          keyboardType: TextInputType.text,
-          decoration: InputDecoration(
-            labelText: "Username",
-            hintText: "Enter your Username",
-            prefixIcon: const Icon(Icons.person_outline),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        const SizedBox(height: 20),
-        TextFormField(
-          controller: emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            labelText: "Email Address",
-            hintText: "example@mail.com",
-            errorText: emailError,
-            prefixIcon: const Icon(Icons.email_outlined),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        const SizedBox(height: 20),
-        TextFormField(
-          controller: mobileController,
-          keyboardType: TextInputType.phone,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-          ],
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
-          decoration: InputDecoration(
-            hintText: "00000 00000",
-            prefixIcon: CountryPicker(
-              selectedCode: selectedCountryCode,
-              codes: countryCodes,
-              onChanged: onCountryCodeChanged,
+        const SizedBox(height: 24),
+
+        Row(
+          children: [
+            Expanded(child: Divider(color: Colors.grey.shade300)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "OR",
+                style: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            Expanded(child: Divider(color: Colors.grey.shade300)),
+          ],
+        ),
+
+        const SizedBox(height: 24),
+
+        AuthSecondaryButton(
+          text: "New Shop? Create Account",
+          onPressed: isLoading ? null : onSwitchMode,
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Optional: Forgot Password placeholder if you add that logic later
+        Center(
+          child: TextButton(
+            onPressed: () {
+              // Implementation for forgot password
+            },
+            child: Text(
+              "Forgot Credentials?",
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 13,
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTextFieldssignin() {
+  Widget _buildSignInFields() {
     return Column(
       children: [
         TextFormField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => isValid ? onSubmit() : null,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: Color(0xFF1A1A1A),
+          ),
           decoration: InputDecoration(
             labelText: "Email Address",
-            hintText: "example@mail.com",
+            labelStyle: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+            hintText: "E.g. shopowner@example.com",
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal),
             errorText: emailError,
-            prefixIcon: const Icon(Icons.email_outlined),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            prefixIcon: const Icon(
+              Icons.email_outlined, 
+              color: Color(0xFF00A36C), // Professional Green
+              size: 22,
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF00A36C), width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
-        // TextFormField(
-        //   controller: mobileController,
-        //   keyboardType: TextInputType.phone,
-        //   inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-        //   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2),
-        //   decoration: InputDecoration(
-        //     hintText: "00000 00000",
-        //     prefixIcon: _CountryPicker(
-        //       selectedCode: selectedCountryCode,
-        //       codes: countryCodes,
-        //       onChanged: onCountryCodeChanged,
-        //     ),
-        //     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        //   ),
-        // ),
       ],
     );
   }
