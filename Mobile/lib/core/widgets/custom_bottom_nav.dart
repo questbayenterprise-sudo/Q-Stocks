@@ -244,13 +244,13 @@ class _OwnerNav extends StatelessWidget {
                     onTap: () => context.go('/my-shops')
                   ),
                   const SizedBox(width: 76),
-                  _TabItem(
-                    icon: Icons.receipt_long_outlined, 
-                    activeIcon: Icons.receipt_long, 
-                    label: "Sales", 
-                    isActive: idx == 3, 
-                    onTap: () => context.go('/inventory/sales')
-                  ),
+                 _TabItem(
+  icon: Icons.receipt_long_outlined, 
+  activeIcon: Icons.receipt_long, 
+  label: "Sales", 
+  isActive: idx == 3, 
+  onTap: () => context.go('/inventory/sales'), // This now opens the List Page
+),
                   _TabItem(icon: Icons.menu_rounded, activeIcon: Icons.menu_rounded, label: "More", isActive: idx == 4, onTap: () => context.go('/more')),
                 ],
               ),

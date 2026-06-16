@@ -139,7 +139,6 @@ CREATE TABLE IF NOT EXISTS customers (
     current_balance REAL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_ref TEXT UNIQUE,
@@ -150,11 +149,8 @@ CREATE TABLE IF NOT EXISTS orders (
     total_amount REAL NOT NULL,
     paid_amount REAL DEFAULT 0,
     balance_due REAL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (shop_id) REFERENCES shops(id),
-    FOREIGN KEY (customer_id) REFERENCES customers(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (paymode_id) REFERENCES payment_modes(id)
+    status TEXT DEFAULT 'COMPLETED', -- <--- ENSURE THIS LINE IS HERE
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS order_items (

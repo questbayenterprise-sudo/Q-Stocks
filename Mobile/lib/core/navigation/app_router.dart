@@ -13,7 +13,9 @@ import '../../../features/home/presentation/pages/dashboard_page.dart';
 import '../../../features/home/presentation/bloc/home_bloc.dart';
 
 // --- Shop Management ---
+import '../../features/inventory/presentation/pages/add_sales_page.dart';
 import '../../features/inventory/presentation/pages/income_entry_page.dart';
+import '../../features/inventory/presentation/pages/sales_list_page.dart';
 import '../../features/shops/data/models/shop_model.dart';
 import '../../features/shops/presentation/pages/my_shop_list_page.dart';
 import '../../features/shops/presentation/pages/add_shop_page.dart';
@@ -149,8 +151,16 @@ GoRoute(
   builder: (context, state) => const IncomeEntryPage(),
 ),
         // Inventory Sub-Routes (Dropdown logic)
-        GoRoute(path: '/inventory/sales', builder: (context, state) => const SalesPage()),
-        GoRoute(path: '/inventory/stocks', builder: (context, state) => const StocksPage()),
+GoRoute(
+  path: '/inventory/sales',
+  builder: (context, state) => const SalesListPage(),
+),
+
+// 2. Add Sales Page (The Invoice Form)
+GoRoute(
+  path: '/inventory/sales/add',
+  builder: (context, state) => const AddSalesPage(),
+),        GoRoute(path: '/inventory/stocks', builder: (context, state) => const StocksPage()),
         GoRoute(path: '/inventory/reports', builder: (context, state) => const ReportsPage()),
 
         // Settings / More Tab
