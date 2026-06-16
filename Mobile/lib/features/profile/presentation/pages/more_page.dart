@@ -54,6 +54,11 @@ class MorePage extends StatelessWidget {
                       onTap: () => context.push('/inventory/sales'),
                     ),
                     _buildSubMenuTile(
+      title: "Income Entry",
+      icon: Icons.add_card_outlined,
+      onTap: () => context.push('/inventory/income'),
+    ),
+                    _buildSubMenuTile(
                       title: "Stocks",
                       icon: Icons.warehouse_outlined,
                       onTap: () => context.push('/inventory/stocks'),

@@ -13,6 +13,7 @@ import '../../../features/home/presentation/pages/dashboard_page.dart';
 import '../../../features/home/presentation/bloc/home_bloc.dart';
 
 // --- Shop Management ---
+import '../../features/inventory/presentation/pages/income_entry_page.dart';
 import '../../features/shops/data/models/shop_model.dart';
 import '../../features/shops/presentation/pages/my_shop_list_page.dart';
 import '../../features/shops/presentation/pages/add_shop_page.dart';
@@ -143,7 +144,10 @@ final GoRouter appRouter = GoRouter(
             ),
           ],
         ),
-
+GoRoute(
+  path: '/inventory/income',
+  builder: (context, state) => const IncomeEntryPage(),
+),
         // Inventory Sub-Routes (Dropdown logic)
         GoRoute(path: '/inventory/sales', builder: (context, state) => const SalesPage()),
         GoRoute(path: '/inventory/stocks', builder: (context, state) => const StocksPage()),
