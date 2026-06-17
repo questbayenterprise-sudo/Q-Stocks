@@ -42,22 +42,29 @@ class MorePage extends StatelessWidget {
                   onTap: () => context.push('/customers'),
                 ),
                 // INVENTORY DROPDOWN
-                _buildExpansionMenuTile(
+                 _buildExpansionMenuTile(
                   context: context,
                   icon: Icons.inventory_2_outlined,
                   title: "Inventory",
                   iconColor: Colors.teal,
                   children: [
                     _buildSubMenuTile(
-                      title: "Sales",
+                      title: "Sales History",
                       icon: Icons.point_of_sale_outlined,
                       onTap: () => context.push('/inventory/sales'),
                     ),
+                    // --- ADDED THIS MENU ITEM ---
                     _buildSubMenuTile(
-      title: "Income Entry",
-      icon: Icons.add_card_outlined,
-      onTap: () => context.push('/inventory/income'),
-    ),
+                      title: "Pending Payments",
+                      icon: Icons.money_off_csred_rounded,
+                      onTap: () => context.push('/inventory/pending'),
+                    ),
+                    // ----------------------------
+                    _buildSubMenuTile(
+                      title: "Income Entry",
+                      icon: Icons.add_card_outlined,
+                      onTap: () => context.push('/inventory/income'),
+                    ),
                     _buildSubMenuTile(
                       title: "Stocks",
                       icon: Icons.warehouse_outlined,

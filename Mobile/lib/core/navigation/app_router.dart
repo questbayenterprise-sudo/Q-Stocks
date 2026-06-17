@@ -13,8 +13,11 @@ import '../../../features/home/presentation/pages/dashboard_page.dart';
 import '../../../features/home/presentation/bloc/home_bloc.dart';
 
 // --- Shop Management ---
+import '../../features/customers/data/models/customer_model.dart';
+import '../../features/customers/presentation/pages/add_customer_page.dart';
 import '../../features/inventory/presentation/pages/add_sales_page.dart';
 import '../../features/inventory/presentation/pages/income_entry_page.dart';
+import '../../features/inventory/presentation/pages/pending_payments_page.dart';
 import '../../features/inventory/presentation/pages/sales_list_page.dart';
 import '../../features/shops/data/models/shop_model.dart';
 import '../../features/shops/presentation/pages/my_shop_list_page.dart';
@@ -33,7 +36,6 @@ import '../../../features/customers/presentation/pages/customer_ledger_page.dart
 import '../../../features/customers/presentation/bloc/customer_bloc.dart';
 
 // --- Inventory (Sales, Stocks, Reports) ---
-import '../../../features/inventory/presentation/pages/sales_page.dart';
 import '../../../features/inventory/presentation/pages/stocks_page.dart';
 import '../../../features/inventory/presentation/pages/reports_page.dart';
 import '../../../features/inventory/presentation/bloc/inventory_bloc.dart';
@@ -155,7 +157,16 @@ GoRoute(
   path: '/inventory/sales',
   builder: (context, state) => const SalesListPage(),
 ),
-
+GoRoute(
+  path: '/customers/add',
+  builder: (context, state) => AddCustomerPage(
+    initialCustomer: state.extra as CustomerModel?,
+  ),
+),
+GoRoute(
+  path: '/inventory/pending',
+  builder: (context, state) => const PendingPaymentsPage(),
+),
 // 2. Add Sales Page (The Invoice Form)
 GoRoute(
   path: '/inventory/sales/add',
