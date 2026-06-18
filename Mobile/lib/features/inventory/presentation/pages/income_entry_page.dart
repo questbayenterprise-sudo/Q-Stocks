@@ -24,33 +24,22 @@ class _IncomeEntryPageState extends State<IncomeEntryPage> {
   CustomerModel? _selectedCustomer;
   double _currentOutstanding = 0.0;
   final _amountController = TextEditingController();
+  final _remarksController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Load shops so the dropdown is populated
     context.read<ShopBloc>().add(LoadShops());
   }
 
-  // Fetch specific customer balance when selected
   void _onCustomerChanged(CustomerModel? customer) async {
     if (customer == null) {
-      setState(() {
-        _selectedCustomer = null;
-        _currentOutstanding = 0.0;
-      });
+      setState(() { _selectedCustomer = null; _currentOutstanding = 0.0; });
       return;
     }
-    
     final db = await DatabaseHelper.instance.database;
-    final res = await db.query(
-      'customers', 
-      columns: ['current_balance'], 
-      where: 'id = ?', 
-      whereArgs: [customer.id]
-    );
-    
+    final res = await db.query('customers', columns: ['current_balance'], where: 'id = ?', whereArgs: [customer.id]);
     setState(() {
       _selectedCustomer = customer;
       _currentOutstanding = double.tryParse(res.first['current_balance'].toString()) ?? 0.0;
@@ -60,10 +49,7 @@ class _IncomeEntryPageState extends State<IncomeEntryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Income / Payment Entry", style: TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text("Receive Payment", style: TextStyle(fontWeight: FontWeight.bold))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -71,90 +57,53 @@ class _IncomeEntryPageState extends State<IncomeEntryPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Shop Dropdown
-              const Text("Shop Branch", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              const SizedBox(height: 8),
-              BlocBuilder<ShopBloc, ShopState>(
-                builder: (context, state) {
-                  return DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      hintText: "Select Shop",
-                      prefixIcon: Icon(Icons.storefront, color: Color(0xFF00A36C)),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: (state is ShopLoaded) 
-                      ? state.shops.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList() 
-                      : [],
-                    onChanged: (val) => setState(() => _selectedShopId = val),
-                    validator: (v) => v == null ? "Please select a shop" : null,
-                  );
-                },
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: "Select Shop", border: OutlineInputBorder()),
+                items: context.watch<ShopBloc>().state is ShopLoaded 
+                  ? (context.read<ShopBloc>().state as ShopLoaded).shops.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList() 
+                  : [],
+                onChanged: (val) => setState(() => _selectedShopId = val),
+                validator: (v) => v == null ? "Required" : null,
               ),
               const SizedBox(height: 20),
-
-              // 2. Customer Search
-              const Text("Customer Name", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              const SizedBox(height: 8),
               DropdownSearch<CustomerModel>(
                 items: (f, p) => _customerRepo.fetchCustomers(),
-                itemAsString: (CustomerModel? c) => c?.name ?? "",
+                itemAsString: (c) => c.name,
                 onChanged: _onCustomerChanged,
                 compareFn: (i, s) => i.id == s.id,
                 decoratorProps: const DropDownDecoratorProps(
-                  decoration: InputDecoration(
-                    hintText: "Search Customer", 
-                    prefixIcon: Icon(Icons.person, color: Color(0xFF00A36C)), 
-                    border: OutlineInputBorder()
-                  ),
+                  decoration: InputDecoration(labelText: "Search Customer", prefixIcon: Icon(Icons.person), border: OutlineInputBorder()),
                 ),
                 popupProps: const PopupProps.menu(showSearchBox: true),
               ),
               const SizedBox(height: 20),
-
-              // 3. Outstanding Display
               if (_selectedCustomer != null)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50, 
-                    borderRadius: BorderRadius.circular(12), 
-                    border: Border.all(color: Colors.red.shade100)
-                  ),
+                  decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.shade100)),
                   child: Column(
                     children: [
-                      const Text("CURRENT OUTSTANDING", 
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
-                      const SizedBox(height: 4),
+                      const Text("CURRENT OUTSTANDING", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
                       Text("₹${_currentOutstanding.toStringAsFixed(2)}", 
-                        // FIXED: Changed FontWeight.black to FontWeight.w900
                         style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.red)),
                     ],
                   ),
                 ),
-
               const SizedBox(height: 30),
-
-              // 4. Amount Paid Input
-              const Text("Payment Received", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  labelText: "Amount Received (₹)",
-                  prefixIcon: Icon(Icons.account_balance_wallet, color: Color(0xFF00A36C)),
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                validator: (v) => (v == null || v.isEmpty) ? "Enter amount received" : null,
+                decoration: const InputDecoration(labelText: "Amount Received (₹)", prefixIcon: Icon(Icons.account_balance_wallet, color: Color(0xFF00A36C)), border: OutlineInputBorder()),
+                validator: (v) => v!.isEmpty ? "Enter amount" : null,
               ),
-
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _remarksController,
+                decoration: const InputDecoration(labelText: "Remarks (Optional)", border: OutlineInputBorder()),
+              ),
               const SizedBox(height: 40),
-
-              // 5. Submit Button
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00A36C),
@@ -164,7 +113,7 @@ class _IncomeEntryPageState extends State<IncomeEntryPage> {
                 onPressed: _isLoading ? null : _submitPayment,
                 child: _isLoading 
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("RECORD PAYMENT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  : const Text("RECORD PAYMENT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -181,29 +130,18 @@ class _IncomeEntryPageState extends State<IncomeEntryPage> {
           customerId: _selectedCustomer!.id,
           shopId: _selectedShopId!,
           amountPaid: double.parse(_amountController.text),
-          paymodeId: 1, // Default to Cash
-          remarks: "Customer Payment Received",
+          paymodeId: 1,
+          remarks: _remarksController.text.isEmpty ? "Payment Received" : _remarksController.text,
         );
-        
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("✅ Payment recorded & Balance updated"), backgroundColor: Colors.green)
-          );
-          context.pop(); // Return to dashboard
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Payment recorded successfully"), backgroundColor: Colors.green));
+          context.pop(true); // Return 'true' to signal a refresh is needed
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red)
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
-    } else if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a customer first"))
-      );
     }
   }
 }

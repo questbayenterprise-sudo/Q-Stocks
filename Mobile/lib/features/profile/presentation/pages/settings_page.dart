@@ -176,25 +176,25 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             const SizedBox(height: 20),
 
-            // --- SECTION 1: NOTIFICATIONS ---
-            _buildSectionHeader("Notifications"),
-            _buildSectionContainer([
-              _buildSwitchTile(
-                "Push Notifications",
-                _pushNotifications,
-                (v) => setState(() => _pushNotifications = v),
-              ),
-              _buildSwitchTile(
-                "Email Updates",
-                _emailUpdates,
-                (v) => setState(() => _emailUpdates = v),
-              ),
-            ]),
+            // // --- SECTION 1: NOTIFICATIONS ---
+            // _buildSectionHeader("Notifications"),
+            // _buildSectionContainer([
+            //   _buildSwitchTile(
+            //     "Push Notifications",
+            //     _pushNotifications,
+            //     (v) => setState(() => _pushNotifications = v),
+            //   ),
+            //   _buildSwitchTile(
+            //     "Email Updates",
+            //     _emailUpdates,
+            //     (v) => setState(() => _emailUpdates = v),
+            //   ),
+            // ]),
 
-            const SizedBox(height: 25),
+            // const SizedBox(height: 25),
 
             // --- SECTION 3: PRIVACY & PREFERENCES ---
-            _buildSectionHeader("Privacy & Preferences"),
+            // _buildSectionHeader("Privacy & Preferences"),
             _buildSectionContainer([
               _buildSwitchTile(
                 "Dark Mode",
@@ -204,11 +204,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   ThemeProvider().toggleTheme(v);
                 },
               ),
-              _buildSettingTile(
-                Icons.security,
-                "Privacy Policy",
-                onTap: () => context.push('/privacy-policy'),
-              ),
+              // _buildSettingTile(
+              //   Icons.security,
+              //   "Privacy Policy",
+              //   onTap: () => context.push('/privacy-policy'),
+              // ),
               _buildSettingTile(
                 Icons.delete_outline,
                 "Delete Account",
@@ -218,23 +218,23 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ]),
 
-            const SizedBox(height: 25),
+            // const SizedBox(height: 25),
 
             // --- SECTION 4: SUPPORT ---
-            _buildSectionHeader("Support"),
-            _buildSectionContainer([
-              _buildSettingTile(
-                Icons.help_outline,
-                "Help Center",
-                onTap: () => context.push('/help-center'),
-              ),
-              _buildSettingTile(
-                Icons.info_outline,
-                "About Q-Sports",
-                isLast: true,
-                onTap: () => context.push('/about'),
-              ),
-            ]),
+            // _buildSectionHeader("Support"),
+            // _buildSectionContainer([
+            //   _buildSettingTile(
+            //     Icons.help_outline,
+            //     "Help Center",
+            //     onTap: () => context.push('/help-center'),
+            //   ),
+            //   _buildSettingTile(
+            //     Icons.info_outline,
+            //     "About Q-Sports",
+            //     isLast: true,
+            //     onTap: () => context.push('/about'),
+            //   ),
+            // ]),
 
             const SizedBox(height: 40),
             const Text(

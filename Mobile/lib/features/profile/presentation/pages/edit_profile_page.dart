@@ -9,8 +9,10 @@ import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:dropdown_search/dropdown_search.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/database/database_helper.dart';
 import '../../../auth/Session/user_session.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -22,21 +24,22 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final String baseUrl = AppConfig.baseUrl;
-  String get userId => UserSession().userId ?? "1";
+  String get userId => UserSession().userId ?? "0";
 
   final _formKey = GlobalKey<FormState>();
-  File? _image;
-  String? _serverImageUrl; // Store the image path from Go backend
-  final _picker = ImagePicker();
+  
+  // FIXED: Added back the missing _picker declaration
+  final ImagePicker _picker = ImagePicker(); 
+  
+  File? _pickedImage;
+  String? _currentImageUrl; 
   bool _isLoading = false;
 
-  // Change these to empty initially so we can fill them from the API
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _bioController = TextEditingController();
 
-  // Location state
   String? _selectedCity;
   List<String> _cities = [];
   bool _isDetectingLocation = false;
@@ -44,145 +47,104 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
-    _loadCities();
+    _initData();
   }
+
+  Future<void> _initData() async {
+    setState(() => _isLoading = true);
+    await Future.wait([
+      _loadCities(),
+      _loadUserProfile(),
+    ]);
+    setState(() => _isLoading = false);
+  }
+
+  // ============================================================
+  // 1. DATA LOADING (CLOUD + LOCAL)
+  // ============================================================
 
   Future<void> _loadCities() async {
     try {
-      final url = Uri.parse('$baseUrl/Get_Cities');
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true && data['data'] != null) {
-          setState(() {
-            _cities = List<String>.from(data['data']);
-          });
-        }
-      }
-    } catch (e) {
-      _showSnackBar("Failed to load cities", isError: true);
-    }
-  }
-
-  Future<void> _autoDetectCity() async {
-    setState(() => _isDetectingLocation = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          setState(() => _isDetectingLocation = false);
-          _showLocationServiceDialog();
-        }
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _showSnackBar("Location permission denied", isError: true);
-          return;
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          setState(() => _isDetectingLocation = false);
-          _showPermissionDeniedDialog();
-        }
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
-      );
-
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude, position.longitude,
-      );
-
-      if (placemarks.isNotEmpty) {
-        final city = placemarks.first.locality ?? placemarks.first.subAdministrativeArea ?? "";
-        if (city.isNotEmpty) {
-          setState(() => _selectedCity = city);
-          _showSnackBar("Location detected: $city");
-        }
-      }
-    } catch (e) {
-      _showSnackBar("Could not detect location", isError: true);
-    } finally {
-      if (mounted) setState(() => _isDetectingLocation = false);
-    }
-  }
-
-  // --- NEW: FETCH PROFILE DETAILS ---
-  Future<void> _loadUserProfile() async {
-    setState(() => _isLoading = true);
-    final url = Uri.parse('$baseUrl/Get_UserProfile');
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"user_id": userId}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          final profile = data['data'];
-          setState(() {
-            _nameController.text = profile['username'] ?? "";
-            _emailController.text = profile['email'] ?? "";
-            _phoneController.text = profile['phoneno'] ?? "";
-            _bioController.text = profile['bio'] ?? "";
-            _serverImageUrl = profile['image_url']; // e.g., "uploads/users/1.jpg"
-            final city = profile['city'] ?? "";
-            _selectedCity = city.isNotEmpty ? city : null;
-          });
-          // Save image URL to session for use across the app
-          if (_serverImageUrl != null && _serverImageUrl!.isNotEmpty) {
-            await UserSession().saveImageUrl('$baseUrl/$_serverImageUrl');
+      if (AppConfig.isCloudDb) {
+        final response = await http.get(Uri.parse('$baseUrl/Get_Cities'));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            setState(() => _cities = List<String>.from(data['data']));
           }
         }
       } else {
-        _showSnackBar("Failed to load profile", isError: true);
+        final db = await DatabaseHelper.instance.database;
+        final List<Map<String, dynamic>> res = await db.query('cities', where: 'is_active = 1');
+        setState(() => _cities = res.map((e) => e['name'].toString()).toList());
       }
     } catch (e) {
-      _showSnackBar("Error connecting to server", isError: true);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      debugPrint("City load error: $e");
     }
   }
 
-  Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() => _image = File(pickedFile.path));
+  Future<void> _loadUserProfile() async {
+    try {
+      if (AppConfig.isCloudDb) {
+        final response = await http.post(
+          Uri.parse('$baseUrl/Get_UserProfile'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"user_id": userId}),
+        );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            final profile = data['data'];
+            _populateFields(profile);
+            if (profile['image_url'] != null) {
+              _currentImageUrl = '$baseUrl/${profile['image_url']}';
+            }
+          }
+        }
+      } else {
+        final db = await DatabaseHelper.instance.database;
+        final List<Map<String, dynamic>> res = await db.query('users', where: 'id = ?', whereArgs: [userId]);
+        if (res.isNotEmpty) {
+          final profile = res.first;
+          _populateFields(profile);
+          
+          // FIXED: Added .toString() to cast Object? to String?
+          _currentImageUrl = profile['image_url']?.toString(); 
+        }
+      }
+    } catch (e) {
+      _showSnackBar("Failed to sync profile", isError: true);
     }
   }
+
+  void _populateFields(Map<String, dynamic> data) {
+    _nameController.text = data['username']?.toString() ?? "";
+    _emailController.text = data['email']?.toString() ?? "";
+    _phoneController.text = data['phoneno']?.toString() ?? "";
+    _bioController.text = data['bio']?.toString() ?? "";
+    _selectedCity = (data['city']?.toString().isNotEmpty ?? false) ? data['city'].toString() : null;
+  }
+
+  // ============================================================
+  // 2. DATA SAVING (CLOUD + LOCAL)
+  // ============================================================
 
   void _confirmSave() {
     if (_formKey.currentState!.validate()) {
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Confirm Update"),
-          content: const Text("Do you want to save the changes to your profile?"),
+        builder: (ctx) => AlertDialog(
+          title: const Text("Confirm Changes"),
+          content: const Text("Would you like to update your manager profile details?"),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("CANCEL", style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CANCEL")),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A36C)),
               onPressed: () {
-                Navigator.pop(context);
-                _updateProfileToServer();
+                Navigator.pop(ctx);
+                _performUpdate();
               },
-              child: const Text("SAVE", style: TextStyle(color: Color(0xFF00A36C), fontWeight: FontWeight.bold)),
+              child: const Text("UPDATE", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -190,65 +152,61 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  Future<void> _updateProfileToServer() async {
+  Future<void> _performUpdate() async {
     setState(() => _isLoading = true);
-    final url = Uri.parse('$baseUrl/Update_Cususer'); 
 
     try {
-      var request = http.MultipartRequest('POST', url);
-      request.fields['id'] = userId;
-      request.fields['username'] = _nameController.text.trim();
-      request.fields['email'] = _emailController.text.trim();
-      request.fields['phoneno'] = _phoneController.text.trim();
-      request.fields['acccode'] = "CUST_DEFAULT";
-      request.fields['bio'] = _bioController.text.trim();
-      request.fields['city'] = _selectedCity ?? "";
+      if (AppConfig.isCloudDb) {
+        var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/Update_Cususer'));
+        request.fields['id'] = userId;
+        request.fields['username'] = _nameController.text.trim();
+        request.fields['email'] = _emailController.text.trim();
+        request.fields['phoneno'] = _phoneController.text.trim();
+        request.fields['bio'] = _bioController.text.trim();
+        request.fields['city'] = _selectedCity ?? "";
 
-      if (_image != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'image', 
-          _image!.path,
-          filename: path.basename(_image!.path),
-        ));
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true) {
-          // Update session with latest values
-          final session = UserSession();
-          final updatedName = _nameController.text.trim();
-          await session.saveSession(
-            session.userId ?? userId,
-            updatedName,
-            session.userType?.name,
-          );
-          if (_selectedCity != null) {
-            await session.saveCity(_selectedCity!);
-          }
-          // Update image URL in session
-          if (_image != null) {
-            // New image uploaded — construct the URL
-            final ext = _image!.path.split('.').last;
-            await session.saveImageUrl('$baseUrl/uploads/users/${session.userId}.$ext');
-          }
-
-          _showSuccessTrophyDialog();
-        } else {
-          _showSnackBar(data['message'] ?? "Update failed", isError: true);
+        if (_pickedImage != null) {
+          request.files.add(await http.MultipartFile.fromPath('image', _pickedImage!.path));
         }
+
+        final response = await http.Response.fromStream(await request.send());
+        if (response.statusCode != 200) throw Exception("Cloud error");
+        
       } else {
-        _showSnackBar("Server Error: ${response.statusCode}", isError: true);
+        final db = await DatabaseHelper.instance.database;
+        final data = {
+          'username': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phoneno': _phoneController.text.trim(),
+          'bio': _bioController.text.trim(),
+          'city': _selectedCity ?? "",
+        };
+
+        if (_pickedImage != null) {
+          data['image_url'] = _pickedImage!.path;
+        }
+
+        await db.update('users', data, where: 'id = ?', whereArgs: [userId]);
       }
+
+      // SYNC SESSION
+      final session = UserSession();
+      await session.saveSession(userId, _nameController.text.trim(), session.userType?.name);
+      if (_selectedCity != null) await session.saveCity(_selectedCity!);
+      if (_pickedImage != null) await session.saveImageUrl(_pickedImage!.path);
+
+      _showSuccessTrophyDialog();
+
     } catch (e) {
-      _showSnackBar("Connection Error: $e", isError: true);
+      _showSnackBar("Update failed: $e", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  // ============================================================
+  // 3. UI COMPONENTS & DIALOGS
+  // ============================================================
 
   void _showSuccessTrophyDialog() {
     showDialog(
@@ -260,12 +218,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.network(
-              "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3YxeXp6Znd4bmZyZ3RreHpxZ3RreHpxZ3RreHpxZ3RreHpxJmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlIDU8PZFn8vvDG/giphy.gif",
+              "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3YxeXp6Znd4bmZyZ3RreHpxZ3RreHpxZ3RreHpxJmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlIDU8PZFn8vvDG/giphy.gif",
               height: 120,
+              errorBuilder: (c,e,s) => const Icon(Icons.check_circle, size: 80, color: Color(0xFF00A36C)),
             ),
             const SizedBox(height: 15),
-            const Text("Champion Updated! 🏆", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00A36C))),
-            const Text("Your profile is match-ready.", textAlign: TextAlign.center),
+            const Text("Profile Updated! 🏆", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00A36C))),
+            const Text("Your info is now up to date.", textAlign: TextAlign.center),
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A36C)),
@@ -273,7 +232,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 Navigator.pop(context);
                 context.pop();
               },
-              child: const Text("BACK TO PROFILE", style: TextStyle(color: Colors.white)),
+              child: const Text("BACK TO DASHBOARD", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -281,149 +240,73 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  void _showLocationServiceDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.location_off, color: Colors.orange, size: 24),
-            SizedBox(width: 10),
-            Text("Location Disabled"),
-          ],
-        ),
-        content: const Text(
-          "Location services are turned off. Please enable location services in your device settings to auto-detect your location.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("CANCEL", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Geolocator.openLocationSettings();
-            },
-            child: const Text(
-              "OPEN SETTINGS",
-              style: TextStyle(color: Color(0xFF00A36C), fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _autoDetectCity() async {
+    setState(() => _isDetectingLocation = true);
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
+        final city = placemarks.first.locality ?? "";
+        if (city.isNotEmpty) setState(() => _selectedCity = city);
+      }
+    } catch (_) {}
+    setState(() => _isDetectingLocation = false);
   }
 
-  void _showPermissionDeniedDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.block, color: Colors.red, size: 24),
-            SizedBox(width: 10),
-            Text("Permission Denied"),
-          ],
-        ),
-        content: const Text(
-          "Location permission is permanently denied. Please enable it from your app settings to use auto-detect.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("CANCEL", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Geolocator.openAppSettings();
-            },
-            child: const Text(
-              "OPEN APP SETTINGS",
-              style: TextStyle(color: Color(0xFF00A36C), fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _pickImage() async {
+    final XFile? file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    if (file != null) setState(() => _pickedImage = File(file.path));
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: isError ? Colors.red : Colors.green),
-    );
+  void _showSnackBar(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: isError ? Colors.red : Colors.green));
   }
 
   @override
   Widget build(BuildContext context) {
-    // Logic to determine which image to show
-    ImageProvider avatarImage;
-    if (_image != null) {
-      avatarImage = FileImage(_image!); // Locally picked image
-    } else if (_serverImageUrl != null && _serverImageUrl!.isNotEmpty) {
-      avatarImage = NetworkImage('$baseUrl/$_serverImageUrl'); // Image from Go server
+    ImageProvider avatar;
+    if (_pickedImage != null) {
+      avatar = FileImage(_pickedImage!);
+    } else if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) {
+      avatar = _currentImageUrl!.startsWith('http') 
+          ? NetworkImage(_currentImageUrl!) 
+          : FileImage(File(_currentImageUrl!)) as ImageProvider;
     } else {
-      avatarImage = const NetworkImage('https://via.placeholder.com/150'); // Placeholder
+      avatar = const AssetImage('assets/images/logo.png'); 
     }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Edit Profile"),
-        centerTitle: true,
+        title: const Text("Edit Manager Profile", style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
         actions: [
-          _isLoading 
-            ? const Center(child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 15),
-                child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-              ))
-            : TextButton(
-                onPressed: _confirmSave,
-                child: const Text("Save", style: TextStyle(color: Color(0xFF00A36C), fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
+          if (!_isLoading)
+            TextButton(
+              onPressed: _confirmSave,
+              child: const Text("SAVE", style: TextStyle(color: Color(0xFF00A36C), fontWeight: FontWeight.bold)),
+            ),
         ],
       ),
       body: _isLoading && _nameController.text.isEmpty
-          ? const Center(child: CircularProgressIndicator()) // Initial load spinner
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A36C)))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    Center(
-                      child: Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 60,
-                            backgroundColor: Theme.of(context).dividerColor,
-                            backgroundImage: avatarImage,
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: _pickImage,
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(color: Color(0xFF00A36C), shape: BoxShape.circle),
-                                child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
+                    _buildImageHeader(avatar),
+                    const SizedBox(height: 32),
                     _buildTextField("Full Name", _nameController, Icons.person_outline),
-                    _buildTextField("Email Address", _emailController, Icons.email_outlined, keyboardType: TextInputType.emailAddress),
-                    _buildTextField("Phone Number", _phoneController, Icons.phone_android_outlined, keyboardType: TextInputType.phone, isNumberOnly: true),
-                    _buildLocationDropdown(),
-                    _buildTextField("About / Bio", _bioController, Icons.info_outline, maxLines: 3, isRequired: false),
+                    _buildTextField("Email", _emailController, Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+                    _buildTextField("Contact", _phoneController, Icons.phone_android_outlined, keyboardType: TextInputType.phone),
+                    _buildLocationUI(),
+                    _buildTextField("Bio / Notes", _bioController, Icons.notes, maxLines: 3, isRequired: false),
                     const SizedBox(height: 30),
-                    _buildDeleteTile(Icons.delete_outline, "Delete Account", isDestructive: true, isLast: true, onTap: () => context.push('/delete-account')),
+                    _buildDangerZone(),
                   ],
                 ),
               ),
@@ -431,80 +314,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // --- Helper Widgets ---
-  Widget _buildDeleteTile(IconData icon, String title, {bool isLast = false, bool isDestructive = false, VoidCallback? onTap}) {
-    return Column(
-      children: [
-        ListTile(
-          onTap: onTap,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: isDestructive ? Colors.red : Colors.grey[700]),
-              const SizedBox(width: 8),
-              Text(title, style: TextStyle(fontSize: 16, color: isDestructive ? Colors.red : null)),
-            ],
-          ),
-        ),
-        if (!isLast) Divider(height: 1, color: Colors.grey.shade100),
-      ],
-    );
-  }
-
-  Widget _buildLocationDropdown() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
+  Widget _buildImageHeader(ImageProvider provider) {
+    return Center(
+      child: Stack(
         children: [
-          DropdownSearch<String>(
-            selectedItem: _selectedCity,
-            items: (filter, infiniteScrollProps) =>
-                _cities.where((c) => c.toLowerCase().contains(filter.toLowerCase())).toList(),
-            decoratorProps: DropDownDecoratorProps(
-              decoration: InputDecoration(
-                labelText: "City",
-                prefixIcon: const Icon(Icons.location_on_outlined, color: Colors.grey),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF00A36C), width: 2),
-                ),
-              ),
-            ),
-            popupProps: PopupProps.menu(
-              showSearchBox: true,
-              searchFieldProps: TextFieldProps(
-                decoration: InputDecoration(
-                  hintText: "Search and select location",
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              emptyBuilder: (context, searchEntry) => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text("No results found", style: TextStyle(color: Colors.grey)),
-                ),
-              ),
-            ),
-            onChanged: (value) {
-              setState(() => _selectedCity = value);
-            },
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _isDetectingLocation ? null : _autoDetectCity,
-              icon: _isDetectingLocation
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00A36C)))
-                  : const Icon(Icons.my_location, size: 18),
-              label: Text(_isDetectingLocation ? "Detecting..." : "Auto-Detect Location"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF00A36C),
-                side: const BorderSide(color: Color(0xFF00A36C)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+          CircleAvatar(radius: 65, backgroundColor: Colors.grey[100], backgroundImage: provider),
+          Positioned(
+            bottom: 0, right: 0,
+            child: GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(color: Color(0xFF00A36C), shape: BoxShape.circle),
+                child: const Icon(Icons.edit, color: Colors.white, size: 20),
               ),
             ),
           ),
@@ -513,25 +335,64 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, IconData icon, {TextInputType? keyboardType, int maxLines = 1, bool isNumberOnly = false, bool isRequired = true}) {
+  Widget _buildLocationUI() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        children: [
+          DropdownSearch<String>(
+            selectedItem: _selectedCity,
+            items: (f, __) => _cities.where((c) => c.toLowerCase().contains(f.toLowerCase())).toList(),
+            decoratorProps: DropDownDecoratorProps(
+              decoration: InputDecoration(
+                labelText: "Manager Branch City",
+                prefixIcon: const Icon(Icons.location_city),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+            ),
+            onChanged: (v) => setState(() => _selectedCity = v),
+          ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _isDetectingLocation ? null : _autoDetectCity,
+              icon: _isDetectingLocation 
+                  ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)) 
+                  : const Icon(Icons.my_location, size: 14),
+              label: Text(_isDetectingLocation ? "Detecting..." : "Auto-detect City", style: const TextStyle(fontSize: 12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon, {TextInputType? keyboardType, int maxLines = 1, bool isRequired = true}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
         maxLines: maxLines,
-        inputFormatters: isNumberOnly ? [FilteringTextInputFormatter.digitsOnly] : null,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: Colors.grey),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF00A36C), width: 2),
-          ),
+          prefixIcon: Icon(icon, color: Colors.grey[600]),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF00A36C), width: 2)),
         ),
-        validator: isRequired ? (value) => value!.isEmpty ? "This field is required" : null : null,
+        validator: isRequired ? (v) => v!.isEmpty ? "Required" : null : null,
       ),
+    );
+  }
+
+  Widget _buildDangerZone() {
+    return ListTile(
+      onTap: () => context.push('/delete-account'),
+      leading: const Icon(Icons.delete_forever_outlined, color: Colors.red),
+      title: const Text("Deactivate Manager Account", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+      tileColor: Colors.red.shade50,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 }

@@ -17,6 +17,7 @@ import '../../features/customers/data/models/customer_model.dart';
 import '../../features/customers/presentation/pages/add_customer_page.dart';
 import '../../features/inventory/presentation/pages/add_sales_page.dart';
 import '../../features/inventory/presentation/pages/income_entry_page.dart';
+import '../../features/inventory/presentation/pages/income_list_page.dart';
 import '../../features/inventory/presentation/pages/pending_payments_page.dart';
 import '../../features/inventory/presentation/pages/sales_list_page.dart';
 import '../../features/shops/data/models/shop_model.dart';
@@ -148,8 +149,15 @@ final GoRouter appRouter = GoRouter(
             ),
           ],
         ),
+// 1. Income List Page
 GoRoute(
   path: '/inventory/income',
+  builder: (context, state) => const IncomeListPage(),
+),
+
+// 2. Income Entry Form (Reuse your existing page)
+GoRoute(
+  path: '/inventory/income/add',
   builder: (context, state) => const IncomeEntryPage(),
 ),
         // Inventory Sub-Routes (Dropdown logic)

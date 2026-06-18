@@ -98,10 +98,10 @@ void initState() {
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.notifications_none_outlined),
-              onPressed: () => context.push('/alerts'),
-            )
+            // IconButton(
+            //   icon: const Icon(Icons.notifications_none_outlined),
+            //   onPressed: () => context.push('/alerts'),
+            // )
           ],
         ),
       ),
