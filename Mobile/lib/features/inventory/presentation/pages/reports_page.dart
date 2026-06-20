@@ -6,6 +6,7 @@ import '../../../../core/utils/excel_service.dart';
 import '../../../customers/data/models/customer_model.dart';
 import '../../../customers/data/repositories/customer_repository.dart';
 import '../../data/repositories/reports_repository.dart';
+import '../../../../core/utils/pdf_service.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -29,7 +30,29 @@ class _ReportsPageState extends State<ReportsPage> {
 
   String get _formattedRange =>
       "${DateFormat('dd MMM').format(_dateRange.start)} - ${DateFormat('dd MMM yyyy').format(_dateRange.end)}";
+Future<void> _exportToPdf() async {
+    setState(() => _isExporting = true);
+    try {
+      final detailedData = await _repo.getDetailedSalesReport(
+        customerId: _selectedCustomer?.id,
+        start: _dateRange.start,
+        end: _dateRange.end,
+      );
 
+      if (detailedData.isEmpty) throw Exception("No sales found for this period");
+
+      await PdfService.exportSalesReport(
+        salesData: detailedData,
+        fileName: "Report_${DateFormat('ddMMyy').format(DateTime.now())}",
+        period: _formattedRange,
+        customerName: _selectedCustomer?.name,
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -253,11 +276,7 @@ class _ReportsPageState extends State<ReportsPage> {
             label: "EXPORT TO PDF (.PDF)",
             icon: Icons.picture_as_pdf,
             color: const Color(0xFFE91E63),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("PDF Statement feature coming soon!")),
-              );
-            },
+           onPressed: _exportToPdf, 
           ),
         ],
       ),
