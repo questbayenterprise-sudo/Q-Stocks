@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-q-green: #00A36C;
+  --color-q-green-dark: #008F5D;
+}
+
+body {
+  @apply bg-slate-50 antialiased;
+  font-family: 'Inter', system-ui, sans-serif;
+}
