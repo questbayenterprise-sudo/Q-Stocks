@@ -240,7 +240,7 @@ void initState() {
           children: [
             const Text("Recent Transactions", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             TextButton(
-              onPressed: () => context.push('/admin-bookings-full'), // Points to sales history
+onPressed: () => context.push('/inventory/sales'),
               child: const Text("View All", style: TextStyle(color: Color(0xFF00A36C), fontWeight: FontWeight.bold)),
             ),
           ],

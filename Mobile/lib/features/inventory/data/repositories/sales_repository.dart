@@ -124,4 +124,14 @@ class SalesRepository {
     final db = await _db;
     await db.update('orders', {'status': 'CANCELLED'}, where: 'id = ?', whereArgs: [orderId]);
   }
+  // Fetch items for a specific order
+  Future<List<Map<String, dynamic>>> fetchOrderItems(int orderId) async {
+    final db = await _db;
+    return await db.rawQuery('''
+      SELECT oi.*, p.name as product_name, p.uom
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      WHERE oi.order_id = ?
+    ''', [orderId]);
+  }
 }

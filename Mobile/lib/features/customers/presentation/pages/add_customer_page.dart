@@ -29,7 +29,12 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
     final isEdit = widget.initialCustomer != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isEdit ? "Edit Customer" : "New Customer")),
+      appBar: AppBar(
+        title: Text(isEdit ? "Edit Customer" : "Add New Customer"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -38,20 +43,29 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: "Full Name", border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? "Required" : null,
+                decoration: const InputDecoration(
+                  labelText: "Full Name",
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => v!.isEmpty ? "Enter customer name" : null,
               ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: "Phone Number", border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: "Phone Number",
+                  prefixIcon: Icon(Icons.phone_android_outlined),
+                  border: OutlineInputBorder(),
+                ),
               ),
-              const SizedBox(height: 40),
+              const Spacer(),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00A36C),
-                  minimumSize: const Size(double.infinity, 55)
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
@@ -64,7 +78,8 @@ class _AddCustomerPageState extends State<AddCustomerPage> {
                     context.pop();
                   }
                 },
-                child: Text("SAVE CUSTOMER", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text(isEdit ? "UPDATE CUSTOMER" : "SAVE CUSTOMER", 
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               )
             ],
           ),

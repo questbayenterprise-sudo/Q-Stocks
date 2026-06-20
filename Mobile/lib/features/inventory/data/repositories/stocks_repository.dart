@@ -121,4 +121,24 @@ class StocksRepository {
       ORDER BY l.created_at DESC
     ''', [shopId]);
   }
+  // Fetch all stocks across all shops
+  Future<List<Map<String, dynamic>>> getAllShopsStocks() async {
+    final db = await _db;
+    return await db.rawQuery('''
+      SELECT 
+        s.id as stock_id, 
+        p.id as product_id, 
+        p.name as product_name, 
+        sh.name as shop_name,
+        sh.id as shop_id,
+        p.uom, 
+        COALESCE(s.current_qty, 0) as current_qty, 
+        COALESCE(s.min_stock_lvl, 5) as min_stock_lvl
+      FROM stocks s
+      JOIN products p ON s.product_id = p.id
+      JOIN shops sh ON s.shop_id = sh.id
+      WHERE p.is_active = 1
+      ORDER BY sh.name ASC, p.name ASC
+    ''');
+  }
 }

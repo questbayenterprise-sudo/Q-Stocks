@@ -49,7 +49,7 @@ class MorePage extends StatelessWidget {
                   iconColor: Colors.teal,
                   children: [
                     _buildSubMenuTile(
-                      title: "Sales History",
+                      title: "Sales",
                       icon: Icons.point_of_sale_outlined,
                       onTap: () => context.push('/inventory/sales'),
                     ),

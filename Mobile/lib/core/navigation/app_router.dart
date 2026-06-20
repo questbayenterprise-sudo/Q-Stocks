@@ -132,7 +132,7 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/add-shop',
           builder: (context, state) => AddShopPage(
-            initialShop: state.extra as ShopModel?,
+            initialShop: state. extra as ShopModel?,
           ),
         ),
 

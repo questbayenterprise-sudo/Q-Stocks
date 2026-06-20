@@ -1,15 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as path;
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/database/database_helper.dart';

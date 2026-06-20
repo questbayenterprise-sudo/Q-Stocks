@@ -1,24 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import '../../data/repositories/sales_repository.dart';
 
-class SalesListPage extends StatelessWidget {
+class SalesListPage extends StatefulWidget {
   const SalesListPage({super.key});
+
+  @override
+  State<SalesListPage> createState() => _SalesListPageState();
+}
+
+class _SalesListPageState extends State<SalesListPage> {
+  final SalesRepository _salesRepo = SalesRepository();
+  List<Map<String, dynamic>> _sales = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRealSales();
+  }
+
+  Future<void> _loadRealSales() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _salesRepo.fetchSales();
+      setState(() {
+        _sales = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // --- NEW: FUNCTION TO SHOW DETAILS ---
+  void _showOrderDetails(BuildContext context, Map<String, dynamic> sale) async {
+    final int orderId = sale['id'];
+    
+    // Show a loading dialog immediately
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: _salesRepo.fetchOrderItems(orderId),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()));
+            }
+
+            final items = snapshot.data!;
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Invoice ${sale['order_ref']}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 10),
+                  ...items.map((item) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item['product_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("${item['weight']} ${item['uom']} @ ₹${item['rate']}"),
+                    trailing: Text("₹${item['sub_total']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  )),
+                  const Divider(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Grand Total", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text("₹${sale['total_amount']}", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF00A36C))),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text("Sales Records"),
+        title: const Text("Sales", style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: ElevatedButton.icon(
-  onPressed: () => context.push('/inventory/sales/add'), // Navigates to the Add Form
-  icon: const Icon(Icons.add, color: Colors.white),
-  label: const Text("ADD SALE", style: TextStyle(color: Colors.white)),
-  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A36C)),
-),
+          IconButton(
+            onPressed: () => context.push('/inventory/sales/add').then((_) => _loadRealSales()),
+            icon: const Icon(Icons.add_circle, color: Color(0xFF00A36C), size: 32),
           ),
         ],
       ),
@@ -26,27 +110,54 @@ class SalesListPage extends StatelessWidget {
         children: [
           _buildFilterBar(),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
-                  columns: const [
-                    DataColumn(label: Text('Invoice #')),
-                    DataColumn(label: Text('Customer')),
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Total (₹)')),
-                    DataColumn(label: Text('Paid (₹)')),
-                    DataColumn(label: Text('Balance (₹)')),
-                    DataColumn(label: Text('Status')),
-                    DataColumn(label: Text('Actions')),
-                  ],
-                  rows: List.generate(10, (index) => _buildDataRow(index)),
-                ),
-              ),
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _sales.isEmpty
+                    ? const Center(child: Text("No records found"))
+                    : ListView.builder(
+                        itemCount: _sales.length,
+                        padding: const EdgeInsets.all(16),
+                        itemBuilder: (context, index) {
+                          final sale = _sales[index];
+                          return _buildSaleCard(sale);
+                        },
+                      ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSaleCard(Map<String, dynamic> sale) {
+    double total = double.tryParse(sale['total_amount'].toString()) ?? 0;
+    double balance = double.tryParse(sale['balance_due'].toString()) ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: ListTile(
+        title: Text(sale['customer_name'] ?? "Walk-in", style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text("${sale['order_ref']} • ${sale['created_at'].toString().split('T')[0]}"),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text("₹$total", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (balance > 0)
+                  Text("Due: ₹$balance", style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(width: 10),
+            // FIXED: Eye icon now calls the details function
+            IconButton(
+              icon: const Icon(Icons.visibility_outlined, color: Colors.blue),
+              onPressed: () => _showOrderDetails(context, sale),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -55,61 +166,15 @@ class SalesListPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: "Search Invoice or Customer...",
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          _filterDropdown("Status"),
-          const SizedBox(width: 8),
-          _filterDropdown("Date Range"),
-        ],
-      ),
-    );
-  }
-
-  DataRow _buildDataRow(int index) {
-    return DataRow(cells: [
-      DataCell(Text("INV-2024-00${index + 1}")),
-      const DataCell(Text("Raja Kumar")),
-      DataCell(Text(DateFormat('dd-MM-yyyy').format(DateTime.now()))),
-      const DataCell(Text("1250.00")),
-      const DataCell(Text("500.00")),
-      const DataCell(Text("750.00", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
-      DataCell(_statusBadge("COMPLETED")),
-      DataCell(Row(
-        children: [
-          IconButton(icon: const Icon(Icons.visibility_outlined), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.print_outlined), onPressed: () {}),
-        ],
-      )),
-    ]);
-  }
-
-  Widget _statusBadge(String status) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(6)),
-      child: Text(status, style: const TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _filterDropdown(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-      child: DropdownButton<String>(
-        hint: Text(label),
-        underline: const SizedBox(),
-        items: const [],
-        onChanged: (v) {},
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: "Search Invoice or Customer...",
+          prefixIcon: const Icon(Icons.search),
+          filled: true,
+          fillColor: const Color(0xFFF8F9FA),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          contentPadding: EdgeInsets.zero,
+        ),
       ),
     );
   }
