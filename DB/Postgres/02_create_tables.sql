@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS users (
     -- In Postgres, use BOOLEAN (True/False) instead of INTEGER (0/1)
     is_active       BOOLEAN DEFAULT TRUE, 
     -- Use TIMESTAMP instead of DATETIME
+    retry_cnt_lmt       INTEGER DEFAULT 5, 
+    retrycnt_updated_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

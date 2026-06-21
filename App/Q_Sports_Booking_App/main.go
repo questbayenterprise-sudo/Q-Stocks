@@ -50,7 +50,6 @@ func main() {
 	{
 		api.POST("/SignIn", bal.SignIn)
 		api.POST("/Verify_OTP", bal.Verify_OTP)
-		api.POST("/Send_OTP", bal.Send_OTP)
 		api.POST("/Get_UserProfile", bal.Get_UserProfile)
 		api.POST("/Update_Cususer", bal.Update_Cususer)
 

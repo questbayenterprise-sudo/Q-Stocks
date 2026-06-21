@@ -484,6 +484,7 @@ type Otp_struct struct {
 	Phone_no string `json:"Phone_no"`
 	OTP      string `json:"OTP"`
 }
+
 func SignIn(c *gin.Context) {
 	var req SignInRequest
 	ctx := c.Request.Context()
@@ -494,8 +495,8 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
-	// 2. Query the database
-	// Added usr. before columns for clarity and fixed the Scan count mismatch
+	// 2. Query the database to find the user and check their retry limits
+	// We added retry columns to the selection
 	query := `
 	SELECT 
 		usr.id, 
@@ -506,7 +507,9 @@ func SignIn(c *gin.Context) {
 		COALESCE(usr.phoneno, '') as phoneno,
 		COALESCE(usr.address, '') as address, 
 		COALESCE(usr.city, '') as city, 
-		COALESCE(usr.image_url, '') as image_url
+		COALESCE(usr.image_url, '') as image_url,
+		usr.retry_cnt_lmt,
+		usr.retrycnt_updated_on
 	FROM users usr 
 	LEFT JOIN user_roles usr_rl ON usr_rl.user_id = usr.id
 	LEFT JOIN roles rl ON rl.id = usr_rl.role_id
@@ -514,244 +517,122 @@ func SignIn(c *gin.Context) {
 	`
 
 	var user SignInResponse
-	// IMPORTANT: Every column in the SELECT above must have a matching pointer in Scan()
+	var retry_cnt_lmt int
+	var retrycnt_updated_on sql.NullTime
+
 	err := dal.DB.QueryRow(ctx, query, req.Email).Scan(
 		&user.ID,
 		&user.Username,
-		&user.UserType,    // role_id
-		&user.UserType_id, // role_name
+		&user.UserType,
+		&user.UserType_id,
 		&user.Email,
 		&user.PhoneNo,
 		&user.Address,
 		&user.City,
-		&user.ImageURL,    // FIXED: Added this to match COALESCE(usr.image_url, '')
+		&user.ImageURL,
+		&retry_cnt_lmt,
+		&retrycnt_updated_on,
 	)
 
 	if err != nil {
-		// Log the error for debugging
-		fmt.Println("SignIn Error:", err)
-		
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
-			"status":  http.StatusUnauthorized,
 			"message": "User not found or account inactive",
 		})
 		return
 	}
 
-	// 3. Return success
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    user,
-	})
-}
-
-func Send_OTP(c *gin.Context) {
-	var Otp_data Otp_struct
-
-	// Bind JSON
-	if err := c.ShouldBindJSON(&Otp_data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Email is required",
-		})
-		return
-	}
-
-	// Check if OTP verification is enabled in general settings
+	// 3. Check if OTP verification is enabled in general settings
 	var enableVerifyOtp bool
-	otpCheckErr := dal.DB.QueryRow(c.Request.Context(),
-		"SELECT COALESCE(enable_verify_otp, true) FROM tbl_general_settings LIMIT 1").Scan(&enableVerifyOtp)
-	if otpCheckErr == nil && !enableVerifyOtp {
-		// OTP is disabled — return user data directly for auto-login
-		var uid int64
-		var username, usertype string
-		err := dal.DB.QueryRow(c.Request.Context(), `
-			SELECT u.id, u.username, COALESCE(r.role_name, 'user') AS usertype
-			FROM users u
-			LEFT JOIN user_roles ur ON ur.user_id = u.id
-			LEFT JOIN roles r ON r.id = ur.role_id
-			WHERE u.email = $1
-			LIMIT 1`, Otp_data.Email).Scan(&uid, &username, &usertype)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"message": "User not found",
-			})
-			return
-		}
+	_ = dal.DB.QueryRow(ctx, "SELECT COALESCE(enable_verify_otp, true) FROM tbl_general_settings LIMIT 1").Scan(&enableVerifyOtp)
+
+	if !enableVerifyOtp {
+		// PATH A: OTP is disabled — Return user data directly (Auto-Login)
 		c.JSON(http.StatusOK, gin.H{
 			"success":     true,
 			"otp_skipped": true,
-			"message":     "OTP verification is disabled",
-			"data": gin.H{
-				"id":       uid,
-				"username": username,
-				"usertype": usertype,
-			},
+			"message":     "Login successful (OTP skipped)",
+			"data":        user,
 		})
 		return
 	}
 
-	// Generate OTP
-	Otp_data.OTP = GenerateOTP()
+	// PATH B: OTP is enabled — Generate and Send OTP
 
-	var (
-		id                  int64
-		userID              *int64
-		phone               string
-		retry_cnt_lmt       int
-		retrycnt_updated_on sql.NullTime
-	)
-
-	// Check user
-	queryUser := `
-		SELECT id, phoneno, retry_cnt_lmt, retrycnt_updated_on
-		FROM users
-		WHERE email = $1
-	`
-
-	var uid int64
-	err := dal.DB.QueryRow(
-		c.Request.Context(),
-		queryUser,
-		Otp_data.Email,
-	).Scan(&uid, &phone, &retry_cnt_lmt, &retrycnt_updated_on)
-
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": "User not found",
-		})
-		return
-	}
-
-	userID = &uid
-	Otp_data.Phone_no = phone
-
-	// Handle timestamp
-	var createdAt time.Time
+	// Handle retry timestamp logic
+	var lastRetryTime time.Time
 	if retrycnt_updated_on.Valid {
-		createdAt = retrycnt_updated_on.Time
+		lastRetryTime = retrycnt_updated_on.Time
 	} else {
-		createdAt = time.Now().Add(-10 * time.Minute)
+		lastRetryTime = time.Now().Add(-10 * time.Minute)
 	}
 
 	now := time.Now()
-	threshold := createdAt.Add(5 * time.Minute)
+	threshold := lastRetryTime.Add(5 * time.Minute)
 	remaining := threshold.Sub(now)
 
-	// If retry count available
+	// Case 1: User has remaining retries
 	if retry_cnt_lmt > 0 {
+		otpCode := GenerateOTP()
 
-		update_query := `
-			UPDATE users
-			SET retry_cnt_lmt = retry_cnt_lmt - 1,
-				retrycnt_updated_on = now()
-			WHERE email = $1
-			  AND retry_cnt_lmt > 0
-		`
-
-		rows, err := dal.ExecNonQuery(c.Request.Context(), update_query, Otp_data.Email)
-
-		if err != nil || rows == 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"message": "Failed to update retry count",
-			})
+		// Update DB: Reduce retry count and set updated time
+		updateQuery := `UPDATE users SET retry_cnt_lmt = retry_cnt_lmt - 1, retrycnt_updated_on = now() WHERE email = $1`
+		_, err = dal.ExecNonQuery(ctx, updateQuery, user.Email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to update security limits"})
 			return
 		}
 
-		// Insert OTP log
-		queryInsert := `
-			INSERT INTO otp_log (userid, emailid, phoneno, otp)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id
-		`
-
-		err = dal.DB.QueryRow(
-			c.Request.Context(),
-			queryInsert,
-			userID,
-			Otp_data.Email,
-			Otp_data.Phone_no,
-			Otp_data.OTP,
-		).Scan(&id)
-
+		// Log the OTP
+		insertLog := `INSERT INTO otp_log (userid, emailid, phoneno, otp, expires_at) VALUES ($1, $2, $3, $4, $5)`
+		expiresAt := now.Add(7 * time.Minute)
+		_, err = dal.DB.Exec(ctx, insertLog, user.ID, user.Email, user.PhoneNo, otpCode, expiresAt)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"message": "Failed to insert OTP",
-			})
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to generate security code"})
 			return
 		}
 
-		// Send OTP
-		err = SendOTP(Otp_data)
+		// Send the actual Email/SMS
+		otpData := Otp_struct{
+			Email:    user.Email,
+			Phone_no: user.PhoneNo,
+			OTP:      otpCode,
+		}
+		err = SendOTP(otpData)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"message": "Failed to send OTP",
-			})
+			c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "message": "User identified, but failed to send email"})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "OTP Sent successfully",
+			"success":     true,
+			"otp_skipped": false,
+			"message":     "OTP Sent successfully to your email",
 		})
 		return
 	}
 
-	// If retry limit reached
+	// Case 2: Retry limit reached
 	if retry_cnt_lmt == 0 {
-
 		if now.After(threshold) {
+			// Reset retries if enough time has passed
+			resetQuery := `UPDATE users SET retry_cnt_lmt = (SELECT retry_count_limit FROM tbl_general_settings LIMIT 1), retrycnt_updated_on = now() WHERE email = $1`
+			_, _ = dal.ExecNonQuery(ctx, resetQuery, user.Email)
 
-			retry_cnt_query := `
-				UPDATE users
-				SET retry_cnt_lmt = (
-					SELECT retry_count_limit
-					FROM tbl_general_settings
-					LIMIT 1
-				),
-				retrycnt_updated_on = now()
-				WHERE email = $1
-			`
-
-			rows, err := dal.ExecNonQuery(c.Request.Context(), retry_cnt_query, Otp_data.Email)
-
-			if err != nil || rows == 0 {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"success": false,
-					"message": "Database error",
-				})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"success": true,
-				"message": "Retry limit reset. Please request OTP again.",
+			c.JSON(http.StatusLocked, gin.H{
+				"success": false,
+				"message": "Retry limit was reached. It has now been reset. Please try signing in again.",
 			})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusTooManyRequests, gin.H{
 			"success": false,
-			"message": fmt.Sprintf(
-				"Send OTP retry limit reached, try after %v",
-				remaining.Round(time.Minute),
-			),
+			"message": fmt.Sprintf("Too many attempts. Please try again after %v minutes", int(remaining.Minutes())+1),
 		})
 		return
 	}
-
-	c.JSON(http.StatusUnauthorized, gin.H{
-		"success": false,
-		"message": "Failed to send OTP",
-	})
 }
-
 func Verify_OTP(c *gin.Context) {
 	var Otp_data Otp_struct
 	ctx := c.Request.Context()

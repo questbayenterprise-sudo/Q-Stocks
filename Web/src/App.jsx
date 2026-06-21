@@ -6,6 +6,8 @@ import MainLayout from './layouts/MainLayout';
 
 // --- Pages ---
 import LoginPage from './pages/Auth/LoginPage';
+import OtpPage from './pages/Auth/OtpPage';
+
 import DashboardPage from './pages/Dashboard';
 
 function App() {
@@ -27,6 +29,8 @@ function App() {
           <Route path="/stocks" element={<div className="p-8 font-bold">Inventory Stocks Coming Soon...</div>} />
           <Route path="/reports" element={<div className="p-8 font-bold">Business Reports Coming Soon...</div>} />
           <Route path="/settings" element={<div className="p-8 font-bold">App Settings Coming Soon...</div>} />
+          <Route path="/otp" element={<OtpPage />} />
+
         </Route>
 
         {/* Catch-all: Redirect unknown paths to login or home */}
