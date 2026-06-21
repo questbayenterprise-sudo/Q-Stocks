@@ -143,6 +143,8 @@ CREATE TABLE IF NOT EXISTS customers (
     name           VARCHAR(100) NOT NULL,
     phone          VARCHAR(15) UNIQUE,
     address        TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+ 
     opening_balance NUMERIC(10,2) DEFAULT 0,
     current_balance NUMERIC(10,2) DEFAULT 0,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP

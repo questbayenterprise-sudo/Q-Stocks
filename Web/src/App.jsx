@@ -1,5 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import CustomerListPage from './pages/Customers/index';
+import CustomerLedger from './pages/Customers/CustomerLedger';
+import AddCustomerPage from './pages/Customers/AddCustomerPage';
+
 
 // --- Layouts ---
 import MainLayout from './layouts/MainLayout';
@@ -40,16 +44,27 @@ function App() {
             PRIVATE ROUTES (With Menu Layout)
            ========================================== */}
         <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-          
+
           {/* Dashboard */}
           <Route path="/home" element={<DashboardPage />} />
+          {/* --- CUSTOMER SECTION --- */}
+  {/* 1. List Page */}
+  <Route path="/customers" element={<CustomerListPage />} />
 
+  {/* 2. ADD PAGE (Must be ABOVE the ID route) */}
+  <Route path="/customers/add" element={<AddCustomerPage />} />
+
+  {/* 3. EDIT PAGE */}
+  <Route path="/customers/edit/:id" element={<AddCustomerPage />} />
+
+  {/* 4. LEDGER PAGE (Dynamic ID last) */}
+  <Route path="/customers/:id" element={<CustomerLedger />} />
           {/* Shop Management */}
           <Route path="/shops" element={<MyShopListPage />} />
           <Route path="/shops/add" element={<AddShopPage />} />
           <Route path="/shops/edit/:id" element={<AddShopPage />} />
-<Route path="/products/add" element={<AddProductPage />} />
-<Route path="/products/edit/:id" element={<AddProductPage />} />
+          <Route path="/products/add" element={<AddProductPage />} />
+          <Route path="/products/edit/:id" element={<AddProductPage />} />
           {/* Product Management */}
           <Route path="/products" element={<ProductListPage />} />
           <Route path="/products/add" element={<div className="p-10 font-bold">Add Product Form Coming Soon...</div>} />
@@ -60,7 +75,7 @@ function App() {
           <Route path="/sales" element={<div className="p-10 font-bold">Sales History coming soon...</div>} />
           <Route path="/stocks" element={<div className="p-10 font-bold">Stock Management coming soon...</div>} />
           <Route path="/reports" element={<div className="p-10 font-bold">Business Reports coming soon...</div>} />
-          
+
           {/* Settings */}
           <Route path="/settings" element={<div className="p-10 font-bold">App Settings coming soon...</div>} />
           <Route path="/profile" element={<div className="p-10 font-bold">User Profile coming soon...</div>} />

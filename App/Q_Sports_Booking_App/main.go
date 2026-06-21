@@ -64,6 +64,9 @@ func main() {
 		api.POST("/GetProducts", bal.GetProducts)
 		api.POST("/SaveProduct", bal.SaveProduct)
 		api.POST("/DeleteProduct", bal.DeleteProduct)
+		api.GET("/GetAllCustomers", bal.GetAllCustomers)       // To load the list
+		api.POST("/CreateCustomer", bal.CreateCustomer)       // To add new customers
+		api.POST("/GetCustomerLedger", bal.GetCustomerLedger) // To load the "Notebook" view
 		api.GET("/status", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"status": "ok",
