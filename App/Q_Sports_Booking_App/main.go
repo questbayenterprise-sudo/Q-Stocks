@@ -52,13 +52,13 @@ func main() {
 		api.POST("/Verify_OTP", bal.Verify_OTP)
 		api.POST("/Get_UserProfile", bal.Get_UserProfile)
 		api.POST("/Update_Cususer", bal.Update_Cususer)
-  api.POST("/GetShopAnalytics", bal.GetShopAnalytics) 
-    api.POST("/GetRecentSales", bal.GetRecentSales)    
-  api.POST("/Shop_overall_list", bal.Shop_overall_list) 
-    
-    // Ensure these are also here for later
-    api.POST("/SaveShop", bal.SaveShop)
-    api.POST("/DeleteShop", bal.DeleteShop)
+		api.POST("/GetShopAnalytics", bal.GetShopAnalytics)
+		api.POST("/GetRecentSales", bal.GetRecentSales)
+		api.POST("/Shop_overall_list", bal.Shop_overall_list)
+
+		// Ensure these are also here for later
+		api.POST("/SaveShop", bal.SaveShop)
+		api.POST("/DeleteShop", bal.DeleteShop)
 		// API Health Check
 		api.GET("/status", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -81,13 +81,13 @@ func main() {
 
 	// 5. Serve React Static Files
 	// Note: Path adjusted to "../../Web/dist" based on your provided directory structure
-	distPath := "../../Web/dist"
+	distPath := "./Web/dist"
 
 	// Serve the static assets (js, css, images)
 	router.Static("/assets", distPath+"/assets")
 	router.StaticFile("/favicon.ico", distPath+"/favicon.ico")
 	router.StaticFile("/logo.png", distPath+"/logo.png")
-	
+
 	// Serve the main entry point
 	router.StaticFile("/", distPath+"/index.html")
 
