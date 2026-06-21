@@ -1,7 +1,7 @@
 
 -- 1. Insert the User
-INSERT INTO users (username, email, phoneno, is_active) 
-VALUES ('Subhash Admin', 'subhashbalajims@gmail.com', '9876543210', 1);
+INSERT INTO users (username, email, phoneno) 
+VALUES ('Subhash Admin', 'subhashbalajims@gmail.com', '9876543210');
 
 -- 2. Map the User to the Admin Role
 INSERT INTO user_roles (user_id, role_id)

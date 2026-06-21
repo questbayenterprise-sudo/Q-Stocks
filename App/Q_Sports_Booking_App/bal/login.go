@@ -484,52 +484,62 @@ type Otp_struct struct {
 	Phone_no string `json:"Phone_no"`
 	OTP      string `json:"OTP"`
 }
-
 func SignIn(c *gin.Context) {
 	var req SignInRequest
 	ctx := c.Request.Context()
 
 	// 1. Bind JSON request
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Email and Password are required"})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Email is required"})
 		return
 	}
 
 	// 2. Query the database
-	// Note: In a production app, you should use bcrypt to verify the password.
-	// This query assumes you have a password column in your users table.
+	// Added usr. before columns for clarity and fixed the Scan count mismatch
 	query := `
-	select usr.id ,username ,role_id as UserType ,role_name as UserType_id,email ,phoneno
-	,acccode ,address ,city ,state_territory
-	--, COALESCE(image_url, '') 
-	 from users usr 
-		left join user_roles usr_rl on usr_rl.user_id=usr.id
-		left join roles rl on rl.id = usr_rl.role_id
-		where is_active=TRUE and usr.email = $1
+	SELECT 
+		usr.id, 
+		usr.username, 
+		COALESCE(usr_rl.role_id, 0) as UserType, 
+		COALESCE(rl.role_name, 'user') as UserType_id, 
+		usr.email, 
+		COALESCE(usr.phoneno, '') as phoneno,
+		COALESCE(usr.address, '') as address, 
+		COALESCE(usr.city, '') as city, 
+		COALESCE(usr.image_url, '') as image_url
+	FROM users usr 
+	LEFT JOIN user_roles usr_rl ON usr_rl.user_id = usr.id
+	LEFT JOIN roles rl ON rl.id = usr_rl.role_id
+	WHERE usr.is_active = true AND usr.email = $1
 	`
 
 	var user SignInResponse
+	// IMPORTANT: Every column in the SELECT above must have a matching pointer in Scan()
 	err := dal.DB.QueryRow(ctx, query, req.Email).Scan(
 		&user.ID,
 		&user.Username,
-		&user.UserType,
-		&user.UserType_id,
+		&user.UserType,    // role_id
+		&user.UserType_id, // role_name
 		&user.Email,
 		&user.PhoneNo,
-		&user.AccCode,
 		&user.Address,
 		&user.City,
-		&user.State_territory,
+		&user.ImageURL,    // FIXED: Added this to match COALESCE(usr.image_url, '')
 	)
 
 	if err != nil {
+		// Log the error for debugging
+		fmt.Println("SignIn Error:", err)
+		
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"status":  http.StatusUnauthorized,
-			"message": "Invalid email",
+			"message": "User not found or account inactive",
 		})
 		return
 	}
+
+	// 3. Return success
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    user,

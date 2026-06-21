@@ -31,25 +31,31 @@ CREATE TABLE IF NOT EXISTS roles (
     role_name  VARCHAR(50) UNIQUE NOT NULL
 );
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY
-    username TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    phoneno TEXT,
-    password_hash TEXT,
-    address TEXT,
-    city TEXT,
-    image_url TEXT,
-    is_active INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    username        VARCHAR(100) NOT NULL,
+    email           VARCHAR(150) UNIQUE NOT NULL,
+    phoneno         VARCHAR(20),
+    password_hash   TEXT,
+    address         TEXT,
+    city            VARCHAR(100),
+    image_url       TEXT,
+    -- In Postgres, use BOOLEAN (True/False) instead of INTEGER (0/1)
+    is_active       BOOLEAN DEFAULT TRUE, 
+    -- Use TIMESTAMP instead of DATETIME
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, role_id)
 );
+
+-- RECOMMENDATION: Add an index on role_id
+-- Postgres automatically creates an index for the PRIMARY KEY (user_id, role_id).
+-- But if you ever want to "find all users who are Admins", you need this index:
+CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
 
 CREATE TABLE IF NOT EXISTS otp_log (
     id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
