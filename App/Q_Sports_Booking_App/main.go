@@ -24,7 +24,7 @@ func main() {
 
 	router := gin.Default()
 
-	// 2. Universal Middleware (CORS & Security)
+	// 2. Universal Middleware (CORS & Security) - MUST BE FIRST
 	router.Use(func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 		// Allow React Dev (5173) and same-origin requests
@@ -45,7 +45,11 @@ func main() {
 		c.Next()
 	})
 
-	// 3. API Routes Group (Mobile & Web Data)
+	// 3. Serve Physical Uploads Folder
+	// Now that CORS is applied, the browser can fetch these files safely
+	router.Static("/uploads", "./uploads")
+
+	// 4. API Routes Group
 	api := router.Group("/api")
 	{
 		api.POST("/SignIn", bal.SignIn)
@@ -55,11 +59,11 @@ func main() {
 		api.POST("/GetShopAnalytics", bal.GetShopAnalytics)
 		api.POST("/GetRecentSales", bal.GetRecentSales)
 		api.POST("/Shop_overall_list", bal.Shop_overall_list)
-
-		// Ensure these are also here for later
 		api.POST("/SaveShop", bal.SaveShop)
 		api.POST("/DeleteShop", bal.DeleteShop)
-		// API Health Check
+		api.POST("/GetProducts", bal.GetProducts)
+		api.POST("/SaveProduct", bal.SaveProduct)
+		api.POST("/DeleteProduct", bal.DeleteProduct)
 		api.GET("/status", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"status": "ok",
@@ -70,7 +74,7 @@ func main() {
 		})
 	}
 
-	// 4. Global Health Check (Root Level)
+	// 5. Global Health Check
 	router.GET("/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "ok",
@@ -79,30 +83,29 @@ func main() {
 		})
 	})
 
-	// 5. Serve React Static Files
-	// Note: Path adjusted to "../../Web/dist" based on your provided directory structure
+	// 6. Serve React Static Files
 	distPath := "../../Web/dist"
-
-	// Serve the static assets (js, css, images)
 	router.Static("/assets", distPath+"/assets")
 	router.StaticFile("/favicon.ico", distPath+"/favicon.ico")
 	router.StaticFile("/logo.png", distPath+"/logo.png")
-
-	// Serve the main entry point
 	router.StaticFile("/", distPath+"/index.html")
 
-	// 6. SPA Handler (The "404 to index.html" logic)
-	// Redirects all non-API web traffic back to the React index.html for React Router to handle
+	// 7. SPA Handler (The Logic Fix)
 	router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
-		if !strings.HasPrefix(path, "/api") {
-			c.File(distPath + "/index.html")
-		} else {
-			c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "API endpoint not found"})
+
+		// If the request is for an API or an Upload but reached here, it means the file is truly missing.
+		// We return a 404 JSON instead of index.html so images don't "soft fail".
+		if strings.HasPrefix(path, "/api") || strings.HasPrefix(path, "/uploads") {
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "Resource not found"})
+			return
 		}
+
+		// Otherwise, serve index.html for React Router to handle
+		c.File(distPath + "/index.html")
 	})
 
-	// 7. Start Server
+	// 8. Start Server
 	port := ":5000"
 	fmt.Printf("🚀 Q-Stocks Server running on http://localhost%s\n", port)
 	if err := router.Run(port); err != nil {
