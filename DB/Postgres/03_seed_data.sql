@@ -2,6 +2,7 @@
 -- 1. Insert the User
 INSERT INTO users (username, email, phoneno,retry_cnt_lmt) 
 VALUES ('Subhash Admin', 'subhashbalajims@gmail.com', '9876543210',5);
+INSERT INTO roles (role_name) VALUES ('admin'), ('owner'), ('staff');
 
 -- 2. Map the User to the Admin Role
 INSERT INTO user_roles (user_id, role_id)
@@ -14,7 +15,6 @@ WHERE u.email = 'subhashbalajims@gmail.com' AND r.role_name = 'admin';
 -- ============================================================
 
 -- Roles
-INSERT INTO roles (role_name) VALUES ('admin'), ('owner'), ('staff');
 
 -- Payment Modes
 INSERT INTO payment_modes (name) VALUES 

@@ -1,79 +1,56 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 
-// Core Dashboard Components
+// Unified Imports
 import DashboardHeader from './components/DashboardHeader';
 import QuickActions from './components/QuickActions';
 import AnalyticsCards from './components/AnalyticsCards';
-import WeeklyTrendChart from './components/WeeklyTrendChart';
-import RecentSalesList from './components/RecentSalesList';
+import WeeklyChart from './components/WeeklyChart';
+import RecentSales from './components/RecentSales';
+import { fetchDashboardData } from '../../api/dashboardApi';
 
 const DashboardPage = () => {
+  const [data, setData] = useState({ analytics: null, recentSales: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate initial data fetch
-    const timer = setTimeout(() => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) return;
+
+    fetchDashboardData(user.id, user.userType_id).then(res => {
+      setData(res);
       setLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    });
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-q-green border-t-transparent"></div>
-          <p className="font-bold text-slate-400 animate-pulse">Loading Dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-slate-50 font-black text-slate-300 tracking-widest">
+      SYNCING...
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] pb-24">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        
-        {/* Top Section: Profile & Notifications */}
+    <div className="min-h-screen bg-[#F8F9FA] p-6 lg:p-12">
+      <div className="max-w-7xl mx-auto space-y-8 pb-20">
         <DashboardHeader />
         
-        <main className="mt-8 space-y-8">
-          {/* Navigation Shortcuts */}
-          <QuickActions />
-          
-          {/* Primary Statistics */}
-          <AnalyticsCards stats={{
-            totalSales: 12500,
-            totalStockValue: 450.5,
-            customerDues: 8400
-          }} />
+        <QuickActions />
 
-          {/* Graphical Data & Tables */}
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <WeeklyTrendChart trends={[
-                { day: 'Mon', count: 12 }, { day: 'Tue', count: 15 },
-                { day: 'Wed', count: 8 }, { day: 'Thu', count: 20 },
-                { day: 'Fri', count: 18 }, { day: 'Sat', count: 25 },
-                { day: 'Sun', count: 14 }
-              ]} />
-            </div>
-            
-            <div className="lg:col-span-1">
-              <RecentSalesList sales={[
-                { id: 1, orderRef: '101', customerName: 'Raja Kumar', amount: 1200 },
-                { id: 2, orderRef: '102', customerName: 'Sundar M', amount: 850 },
-                { id: 3, orderRef: '103', customerName: 'Anitha Stores', amount: 3200 },
-              ]} />
-            </div>
+        <AnalyticsCards analytics={data.analytics} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <WeeklyChart trends={data.analytics?.weekly_trend || []} />
           </div>
-        </main>
+          <div className="lg:col-span-1">
+            <RecentSales sales={data.recentSales} />
+          </div>
+        </div>
       </div>
 
-      {/* Floating Action Button (FAB) */}
-      <button className="fixed right-6 bottom-6 flex items-center gap-2 rounded-full bg-q-green px-6 py-4 font-black text-white shadow-2xl shadow-q-green/40 hover:bg-q-green-dark transition-all active:scale-90 group">
-        <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform duration-300" />
-        <span className="hidden sm:inline">NEW SALE</span>
+      {/* Mobile FAB */}
+      <button className="fixed bottom-24 right-6 md:right-12 bg-q-green text-white p-4 rounded-full shadow-2xl active:scale-90 transition-transform md:hidden">
+        <Plus size={32} />
       </button>
     </div>
   );

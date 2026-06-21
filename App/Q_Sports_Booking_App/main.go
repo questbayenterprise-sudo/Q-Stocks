@@ -52,7 +52,13 @@ func main() {
 		api.POST("/Verify_OTP", bal.Verify_OTP)
 		api.POST("/Get_UserProfile", bal.Get_UserProfile)
 		api.POST("/Update_Cususer", bal.Update_Cususer)
-
+  api.POST("/GetShopAnalytics", bal.GetShopAnalytics) 
+    api.POST("/GetRecentSales", bal.GetRecentSales)    
+  api.POST("/Shop_overall_list", bal.Shop_overall_list) 
+    
+    // Ensure these are also here for later
+    api.POST("/SaveShop", bal.SaveShop)
+    api.POST("/DeleteShop", bal.DeleteShop)
 		// API Health Check
 		api.GET("/status", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{

@@ -10,7 +10,7 @@ class HomeRepository {
   
 Future<TurfAnalytics> fetchAnalytics(String userId, String userType) async {
   final response = await http.post(
-    Uri.parse('$baseUrl/GetTurfAnalytics'),
+    Uri.parse('$baseUrl/GetShopAnalytics'),
     headers: {"Content-Type": "application/json"},
     body: jsonEncode({"user_id": userId, "user_type": userType}),
   );
@@ -27,9 +27,9 @@ Future<TurfAnalytics> fetchAnalytics(String userId, String userType) async {
 
   throw Exception("Server Error: ${response.statusCode}");
 }
-  Future<List<RecentBooking>> fetchRecentBookings(String userId, String userType) async {
+  Future<List<RecentBooking>> fetchRecentSales(String userId, String userType) async {
   final response = await http.post(
-    Uri.parse('$baseUrl/GetRecentBookingsAdmin'),
+    Uri.parse('$baseUrl/GetRecentSales'),
     headers: {"Content-Type": "application/json"},
     body: jsonEncode({"user_id": userId, "user_type": userType, "limit": 6}),
   );

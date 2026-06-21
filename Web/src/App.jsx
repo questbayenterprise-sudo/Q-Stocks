@@ -1,5 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import MyShopListPage from './pages/Shops';
+import AddShopPage from './pages/Shops/AddShopPage';
+import SalesHistoryPage from './pages/Sales/SalesHistoryPage'; // Create this simple list page
 
 // --- Layouts ---
 import MainLayout from './layouts/MainLayout';
@@ -16,13 +19,15 @@ function App() {
       <Routes>
         {/* Public Route: Login */}
         <Route path="/" element={<LoginPage />} />
-        
+                  <Route path="/sales-history" element={<SalesHistoryPage />} />
+
         {/* Private Routes: Wrapped in MainLayout (Sidebar/BottomNav) */}
         <Route element={<MainLayout />}>
           <Route path="/home" element={<DashboardPage />} />
-          
+          <Route path="/shops/add" element={<AddShopPage />} />
+<Route path="/shops/edit/:id" element={<AddShopPage />} />
           {/* Placeholders for your other modules */}
-          <Route path="/shops" element={<div className="p-8 font-bold">Shops Management Coming Soon...</div>} />
+<Route path="/shops" element={<MyShopListPage />} />
           <Route path="/products" element={<div className="p-8 font-bold">Product Catalog Coming Soon...</div>} />
           <Route path="/customers" element={<div className="p-8 font-bold">Customer Ledger Coming Soon...</div>} />
           <Route path="/sales" element={<div className="p-8 font-bold">Sales History Coming Soon...</div>} />
@@ -30,6 +35,7 @@ function App() {
           <Route path="/reports" element={<div className="p-8 font-bold">Business Reports Coming Soon...</div>} />
           <Route path="/settings" element={<div className="p-8 font-bold">App Settings Coming Soon...</div>} />
           <Route path="/otp" element={<OtpPage />} />
+<Route path="/shops" element={<MyShopListPage />} />
 
         </Route>
 
