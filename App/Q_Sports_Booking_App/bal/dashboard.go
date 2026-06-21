@@ -13,8 +13,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	Models "github.com/qsports/q-sports-booking-app/Models"
-	dal "github.com/qsports/q-sports-booking-app/dal"
+	Models "github.com/qsports/q-stocks-app/Models"
+	dal "github.com/qsports/q-stocks-app/dal"
 )
 
 type search_venue_list struct {
@@ -115,9 +115,9 @@ func Venue_overall_list(c *gin.Context) {
 				venues = append(venues, v)
 			}
 
-		// ──────────────────────────────────────────
-		// CASE 2: Vendor / Owner / Manager → mapped venues only
-		// ──────────────────────────────────────────
+			// ──────────────────────────────────────────
+			// CASE 2: Vendor / Owner / Manager → mapped venues only
+			// ──────────────────────────────────────────
 		} else if userType == "vendor" || userType == "owner" || userType == "manager" {
 			query := `
 				SELECT v.id, v.name, v.location, v.price, v.description, v.image_url
@@ -144,9 +144,9 @@ func Venue_overall_list(c *gin.Context) {
 				venues = append(venues, v)
 			}
 
-		// ──────────────────────────────────────────
-		// CASE 3: User / Guest → location-based
-		// ──────────────────────────────────────────
+			// ──────────────────────────────────────────
+			// CASE 3: User / Guest → location-based
+			// ──────────────────────────────────────────
 		} else {
 			lat := searchstruct.Latitude
 			lng := searchstruct.Longitude
@@ -195,7 +195,7 @@ func Venue_overall_list(c *gin.Context) {
 					}
 					v.ImageURL = filepath.ToSlash(v.ImageURL)
 					v.Sports = []string{}
-				v.SportsData = []VenueSport{}
+					v.SportsData = []VenueSport{}
 					venues = append(venues, v)
 				}
 			} else {
@@ -216,7 +216,7 @@ func Venue_overall_list(c *gin.Context) {
 					}
 					v.ImageURL = filepath.ToSlash(v.ImageURL)
 					v.Sports = []string{}
-				v.SportsData = []VenueSport{}
+					v.SportsData = []VenueSport{}
 					venues = append(venues, v)
 				}
 			}

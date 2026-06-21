@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	dal "github.com/qsports/q-sports-booking-app/dal"
+	dal "github.com/qsports/q-stocks-app/dal"
 	gomail "gopkg.in/gomail.v2"
 )
 

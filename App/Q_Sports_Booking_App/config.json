@@ -5,7 +5,7 @@
     "port":     5432,
     "user":     "postgres.dohaqjmfacurprqdsnqp",
     "password": "Qb@admin@123",
-    "dbname":   "postgres",
+    "dbname":   "q_stocks_db",
     "sslmode":  "disable"
   },
   "mailauth":{

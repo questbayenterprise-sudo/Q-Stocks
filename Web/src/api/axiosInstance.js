@@ -1,8 +1,13 @@
 import axios from 'axios';
 
+// Get the base URL from env or default to localhost:5000
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+// Ensure the URL ends with /api to match your Golang router.Group("/api")
+const baseURL = `${rawBaseUrl.replace(/\/$/, '')}/api`;
+debugger
 const api = axios.create({
-  // This will look for VITE_API_BASE_URL in your .env file
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
+  baseURL: baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

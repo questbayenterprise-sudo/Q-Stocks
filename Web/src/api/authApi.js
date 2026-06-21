@@ -7,6 +7,6 @@ const api = axios.create({
 });
 
 export const signIn = async (email) => {
-  const response = await api.post('/SignIn', { email });
+  const response = await api.post('api/SignIn', { email });
   return response.data;
 };

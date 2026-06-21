@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	dal "github.com/qsports/q-sports-booking-app/dal"
+	dal "github.com/qsports/q-stocks-app/dal"
 )
 
 type Edit_user_profile struct {
@@ -158,13 +158,13 @@ type UserSettingsRequest struct {
 }
 
 type UserSettingsResponse struct {
-	ID               int    `json:"id"`
-	UserID           int    `json:"user_id"`
-	LanguageType     string `json:"language_type"`
-	Region           string `json:"region"`
-	PushNotifications bool  `json:"push_notifications"`
-	EmailUpdates     bool   `json:"email_updates"`
-	Themes           string `json:"themes"`
+	ID                int    `json:"id"`
+	UserID            int    `json:"user_id"`
+	LanguageType      string `json:"language_type"`
+	Region            string `json:"region"`
+	PushNotifications bool   `json:"push_notifications"`
+	EmailUpdates      bool   `json:"email_updates"`
+	Themes            string `json:"themes"`
 }
 
 type UpdateUserSettingsRequest struct {

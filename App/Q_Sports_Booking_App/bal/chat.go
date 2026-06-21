@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	dal "github.com/qsports/q-sports-booking-app/dal"
+	dal "github.com/qsports/q-stocks-app/dal"
 )
 
 // ── Request / Response structs ──

@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2/google"
 
-	dal "github.com/qsports/q-sports-booking-app/dal"
+	dal "github.com/qsports/q-stocks-app/dal"
 	gomail "gopkg.in/gomail.v2"
 )
 
@@ -162,13 +162,13 @@ func Debug_Notification(c *gin.Context) {
 
 	// 5. Try sending to each token
 	testData := BookingNotifyData{
-		BookingID: 9999,
+		BookingID:  9999,
 		BookingRef: "QS-DEBUG-0001",
-		UserID:    req.UserID,
-		VenueName: "Debug Test Venue",
-		Date:      "2026-03-29",
-		StartTime: "10:00 AM",
-		EndTime:   "11:00 AM",
+		UserID:     req.UserID,
+		VenueName:  "Debug Test Venue",
+		Date:       "2026-03-29",
+		StartTime:  "10:00 AM",
+		EndTime:    "11:00 AM",
 	}
 
 	pushResults := []gin.H{}

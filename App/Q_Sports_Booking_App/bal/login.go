@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	dal "github.com/qsports/q-sports-booking-app/dal"
+	dal "github.com/qsports/q-stocks-app/dal"
 )
 
 type User struct {
@@ -99,8 +99,8 @@ func Create_Cususer(c *gin.Context) {
 	state_territory := c.PostForm("state_territory")
 
 	// Basic Validation
-	if usertype != "Customer" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid user type"})
+	if usertype == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "User type is required"})
 		return
 	}
 

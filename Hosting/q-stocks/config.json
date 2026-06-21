@@ -1,0 +1,18 @@
+
+{
+  "database": {
+    "host":     "aws-1-ap-south-1.pooler.supabase.com",
+    "port":     5432,
+    "user":     "postgres.dohaqjmfacurprqdsnqp",
+    "password": "Qb@admin@123",
+    "dbname":   "q_stocks_db",
+    "sslmode":  "disable"
+  },
+  "mailauth":{
+    "from_mailID":"questbayenterprise@gmail.com",
+    "app_name":"QSportsMailAuth",
+    "app_acccode" : "yieh kewl zkbz tfjc"
+  },
+  "fcm_service_account_path": "./firebase-service-account.json",
+  "fcm_project_id": "q-sports-fcm"
+}

@@ -72,7 +72,7 @@ const LoginPage = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="manager@qstocks.com"
+                  placeholder="example@gmail.com"
                   className="w-full pl-12 pr-4 py-4 md:py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-[#00A36C] focus:bg-white transition-all font-medium text-slate-900"
                   required
                 />
