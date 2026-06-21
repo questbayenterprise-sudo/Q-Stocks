@@ -4,7 +4,8 @@ import CustomerListPage from './pages/Customers/index';
 import CustomerLedger from './pages/Customers/CustomerLedger';
 import AddCustomerPage from './pages/Customers/AddCustomerPage';
 
-
+import SalesListPage from './pages/Sales/SalesHistoryPage';
+import AddSalePage from './pages/Sales/AddSalePage';
 // --- Layouts ---
 import MainLayout from './layouts/MainLayout';
 import AddProductPage from './pages/Products/AddProductPage';
@@ -44,21 +45,22 @@ function App() {
             PRIVATE ROUTES (With Menu Layout)
            ========================================== */}
         <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-
+          <Route path="/sales" element={<SalesListPage />} />
+          <Route path="/sales/new" element={<AddSalePage />} />
           {/* Dashboard */}
           <Route path="/home" element={<DashboardPage />} />
           {/* --- CUSTOMER SECTION --- */}
-  {/* 1. List Page */}
-  <Route path="/customers" element={<CustomerListPage />} />
+          {/* 1. List Page */}
+          <Route path="/customers" element={<CustomerListPage />} />
 
-  {/* 2. ADD PAGE (Must be ABOVE the ID route) */}
-  <Route path="/customers/add" element={<AddCustomerPage />} />
+          {/* 2. ADD PAGE (Must be ABOVE the ID route) */}
+          <Route path="/customers/add" element={<AddCustomerPage />} />
 
-  {/* 3. EDIT PAGE */}
-  <Route path="/customers/edit/:id" element={<AddCustomerPage />} />
+          {/* 3. EDIT PAGE */}
+          <Route path="/customers/edit/:id" element={<AddCustomerPage />} />
 
-  {/* 4. LEDGER PAGE (Dynamic ID last) */}
-  <Route path="/customers/:id" element={<CustomerLedger />} />
+          {/* 4. LEDGER PAGE (Dynamic ID last) */}
+          <Route path="/customers/:id" element={<CustomerLedger />} />
           {/* Shop Management */}
           <Route path="/shops" element={<MyShopListPage />} />
           <Route path="/shops/add" element={<AddShopPage />} />
