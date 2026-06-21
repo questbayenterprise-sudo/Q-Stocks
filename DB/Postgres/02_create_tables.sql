@@ -30,20 +30,20 @@ CREATE TABLE IF NOT EXISTS roles (
     id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     role_name  VARCHAR(50) UNIQUE NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS users (
-    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    username        VARCHAR(100) NOT NULL,
-    email           VARCHAR(150) UNIQUE NOT NULL,
-    phoneno         VARCHAR(15),
-    password_hash   TEXT,
-    address         TEXT,
-    city            VARCHAR(100),
-    image_url       TEXT,
-    is_active       BOOLEAN DEFAULT TRUE,
-    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY
+    username TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phoneno TEXT,
+    password_hash TEXT,
+    address TEXT,
+    city TEXT,
+    image_url TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

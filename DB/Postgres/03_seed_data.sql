@@ -1,4 +1,14 @@
 
+-- 1. Insert the User
+INSERT INTO users (username, email, phoneno, is_active) 
+VALUES ('Subhash Admin', 'subhashbalajims@gmail.com', '9876543210', 1);
+
+-- 2. Map the User to the Admin Role
+INSERT INTO user_roles (user_id, role_id)
+SELECT u.id, r.id 
+FROM users u, roles r 
+WHERE u.email = 'subhashbalajims@gmail.com' AND r.role_name = 'admin';
+
 -- ============================================================
 -- 8. SEED DATA (INITIAL SETUP)
 -- ============================================================

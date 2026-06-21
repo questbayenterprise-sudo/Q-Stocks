@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find /c/Users/hp/Documents/GitHub/Q-Sport/Web/q-sport/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
-      "Bash(find /c/Users/hp/Documents/GitHub/Q-Sport -name *.json -o -name *.graphql -o -name *.prisma)",
-      "Bash(find /c/Users/hp/Documents/GitHub/Q-Sport -path */node_modules -prune -o -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\) -print)"
-    ]
-  }
-}
