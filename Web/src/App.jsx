@@ -1,95 +1,111 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import CustomerListPage from './pages/Customers/index';
-import CustomerLedger from './pages/Customers/CustomerLedger';
-import AddCustomerPage from './pages/Customers/AddCustomerPage';
 
-import SalesListPage from './pages/Sales/SalesHistoryPage';
-import AddSalePage from './pages/Sales/AddSalePage';
 // --- Layouts ---
 import MainLayout from './layouts/MainLayout';
-import AddProductPage from './pages/Products/AddProductPage';
 
-// --- Auth Pages ---
+// --- Auth Modules ---
 import LoginPage from './pages/Auth/LoginPage';
 import OtpPage from './pages/Auth/OtpPage';
 
-// --- Dashboard ---
+// --- Dashboard Module ---
 import DashboardPage from './pages/Dashboard';
 
 // --- Shop Management ---
 import MyShopListPage from './pages/Shops';
 import AddShopPage from './pages/Shops/AddShopPage';
-
+import ProfilePage from './pages/Profile/ProfilePage';
+import EditProfilePage from './pages/Profile/EditProfilePage';
+import SettingsPage from './pages/Settings/SettingsPage';
+import DeleteAccountPage from './pages/Settings/DeleteAccountPage';
 // --- Product Management ---
 import ProductListPage from './pages/Products';
-// (Note: You can create a combined AddProductPage similar to AddShopPage)
+import AddProductPage from './pages/Products/AddProductPage';
 
-// --- Simple Protected Route Wrapper ---
+// --- Customer & Ledger ---
+import CustomerListPage from './pages/Customers';
+import AddCustomerPage from './pages/Customers/AddCustomerPage';
+import CustomerLedger from './pages/Customers/CustomerLedger';
+
+// --- Inventory & Sales ---
+import SalesHistoryPage from './pages/Sales/SalesHistoryPage';
+import AddSalePage from './pages/Sales/AddSalePage';
+import StocksPage from './pages/Inventory/StocksPage';
+import IncomeEntryPage from './pages/Inventory/IncomeEntryPage';
+
+// --- Reports ---
+import ReportsPage from './pages/Inventory/ReportsPage';
+
+/**
+ * Enterprise Private Route Wrapper
+ * Checks if a valid session exists in localStorage
+ */
 const PrivateRoute = ({ children }) => {
-  const isAuthenticated = !!localStorage.getItem('user');
-  return isAuthenticated ? children : <Navigate to="/" replace />;
+  const user = localStorage.getItem('user');
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
 };
 
-function App() {
+const App = () => {
   return (
     <Router>
       <Routes>
         {/* ==========================================
-            PUBLIC ROUTES (No Sidebar/BottomNav)
+            PUBLIC ROUTES (Login Flow)
            ========================================== */}
         <Route path="/" element={<LoginPage />} />
         <Route path="/otp" element={<OtpPage />} />
 
         {/* ==========================================
-            PRIVATE ROUTES (With Menu Layout)
+            PRIVATE ROUTES (Authenticated Area)
            ========================================== */}
         <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-          <Route path="/sales" element={<SalesListPage />} />
-          <Route path="/sales/new" element={<AddSalePage />} />
+          
           {/* Dashboard */}
           <Route path="/home" element={<DashboardPage />} />
-          {/* --- CUSTOMER SECTION --- */}
-          {/* 1. List Page */}
-          <Route path="/customers" element={<CustomerListPage />} />
 
-          {/* 2. ADD PAGE (Must be ABOVE the ID route) */}
-          <Route path="/customers/add" element={<AddCustomerPage />} />
-
-          {/* 3. EDIT PAGE */}
-          <Route path="/customers/edit/:id" element={<AddCustomerPage />} />
-
-          {/* 4. LEDGER PAGE (Dynamic ID last) */}
-          <Route path="/customers/:id" element={<CustomerLedger />} />
-          {/* Shop Management */}
+          {/* Shops Module */}
           <Route path="/shops" element={<MyShopListPage />} />
           <Route path="/shops/add" element={<AddShopPage />} />
           <Route path="/shops/edit/:id" element={<AddShopPage />} />
+
+          {/* Products Module */}
+          <Route path="/products" element={<ProductListPage />} />
           <Route path="/products/add" element={<AddProductPage />} />
           <Route path="/products/edit/:id" element={<AddProductPage />} />
-          {/* Product Management */}
-          <Route path="/products" element={<ProductListPage />} />
-          <Route path="/products/add" element={<div className="p-10 font-bold">Add Product Form Coming Soon...</div>} />
-          <Route path="/products/edit/:id" element={<div className="p-10 font-bold">Edit Product Form Coming Soon...</div>} />
+<Route path="/profile" element={<ProfilePage />} />
+<Route path="/profile/edit" element={<EditProfilePage />} />
+<Route path="/settings" element={<SettingsPage />} />
+<Route path="/settings/delete" element={<DeleteAccountPage />} />
 
-          {/* Inventory & Ledger (Placeholders) */}
-          <Route path="/customers" element={<div className="p-10 font-bold">Customer Ledger coming soon...</div>} />
-          <Route path="/sales" element={<div className="p-10 font-bold">Sales History coming soon...</div>} />
-          <Route path="/stocks" element={<div className="p-10 font-bold">Stock Management coming soon...</div>} />
-          <Route path="/reports" element={<div className="p-10 font-bold">Business Reports coming soon...</div>} />
+          {/* Customers & Ledger Module */}
+          <Route path="/customers" element={<CustomerListPage />} />
+          <Route path="/customers/add" element={<AddCustomerPage />} />
+          <Route path="/customers/:id" element={<CustomerLedger />} />
 
-          {/* Settings */}
-          <Route path="/settings" element={<div className="p-10 font-bold">App Settings coming soon...</div>} />
-          <Route path="/profile" element={<div className="p-10 font-bold">User Profile coming soon...</div>} />
+          {/* Sales & Inventory Submenu */}
+          <Route path="/sales" element={<SalesHistoryPage />} />
+          <Route path="/sales/new" element={<AddSalePage />} />
+          <Route path="/stocks" element={<StocksPage />} />
+          <Route path="/income-entry" element={<IncomeEntryPage />} />
+          
+          {/* Reports */}
+          <Route path="/reports" element={<ReportsPage />} />
+
+          {/* General Placeholders */}
+          <Route path="/settings" element={<div className="p-10 font-bold">App Settings - Mobile Style Coming Soon</div>} />
+          <Route path="/profile" element={<div className="p-10 font-bold">User Profile - Mobile Style Coming Soon</div>} />
         </Route>
 
         {/* ==========================================
-            FALLBACKS
+            404 REDIRECT
            ========================================== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;
