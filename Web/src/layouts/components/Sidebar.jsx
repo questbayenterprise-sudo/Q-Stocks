@@ -27,12 +27,23 @@ const Sidebar = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  // --- LOGOUT LOGIC ---
+  const handleLogout = () => {
+    // 1. Clear all session data
+    localStorage.removeItem('user');
+    localStorage.clear(); // Optional: clears everything
+
+    // 2. Redirect to Login Page
+    // { replace: true } prevents the user from clicking 'Back' to return to the dashboard
+    navigate('/', { replace: true });
+  };
+
   return (
     <aside className="w-64 h-screen bg-white border-r border-slate-100 flex flex-col sticky top-0">
       {/* Branding Area */}
       <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-q-green flex items-center justify-center shadow-lg shadow-green-100">
-<img src={APP_CONFIG.logoPath} className="w-full h-full object-contain" />
+        <div className="w-10 h-10 rounded-xl bg-q-green flex items-center justify-center shadow-lg shadow-green-100 p-2">
+          <img src={APP_CONFIG.logoPath} alt="Logo" className="w-full h-full object-contain" />
         </div>
         <span className="text-xl font-black text-slate-800 tracking-tight">Q-Stocks</span>
       </div>
@@ -94,8 +105,11 @@ const Sidebar = () => {
           <Settings size={20} />
           Settings
         </button>
+        
+        {/* FIXED: Attached handleLogout to the onClick event */}
         <button 
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 font-bold text-sm"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors font-bold text-sm"
         >
           <LogOut size={20} />
           Logout
@@ -105,4 +119,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar; // <--- This fixes your error
+export default Sidebar;

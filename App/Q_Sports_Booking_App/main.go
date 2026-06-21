@@ -81,7 +81,7 @@ func main() {
 
 	// 5. Serve React Static Files
 	// Note: Path adjusted to "../../Web/dist" based on your provided directory structure
-	distPath := "./Web/dist"
+	distPath := "../../Web/dist"
 
 	// Serve the static assets (js, css, images)
 	router.Static("/assets", distPath+"/assets")

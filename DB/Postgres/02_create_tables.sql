@@ -84,6 +84,9 @@ CREATE TABLE IF NOT EXISTS shops (
     location      TEXT NOT NULL,
     city_id       INTEGER REFERENCES cities(id),
     contact_phone VARCHAR(20),
+         description   TEXT,   
+                  image_url TEXT,   
+
     is_active     BOOLEAN DEFAULT TRUE,
     created_by    INTEGER REFERENCES users(id),
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP

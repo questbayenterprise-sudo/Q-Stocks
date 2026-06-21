@@ -13,7 +13,8 @@ const MyShopListPage = () => {
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user'));
-const canAddShop = ['admin', 'owner', 'manager'].includes(user?.userType_id?.toLowerCase());
+  debugger
+const canAddShop = ['admin', 'owner', 'manager'].includes(user?.UserType_id?.toLowerCase());
 
   const loadData = async () => {
     try {
