@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Moon, Bell, ShieldAlert, ChevronRight, LogOut, Trash2 } from 'lucide-react';
+import { Moon, ChevronRight, LogOut, Trash2, Sun } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext'; // Import the global hook
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const [darkMode, setDarkMode] = useState(false);
+  // Using the unified theme state
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     localStorage.clear();
@@ -12,43 +14,45 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+    <div className="min-h-screen bg-[color:var(--color-app-bg)] p-6 md:p-10 transition-colors duration-300">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-black text-slate-900 mb-2">Settings</h1>
-        <p className="text-slate-500 font-medium mb-10">Configure your app experience.</p>
+        <h1 className="text-3xl font-black text-[color:var(--color-text-main)] mb-2">
+          Settings
+        </h1>
+        <p className="text-[color:var(--color-text-muted)] font-medium mb-10">
+          Configure your app experience.
+        </p>
 
-        <div className="space-y-4">
+        <div className="space-y-8">
+          {/* --- Appearance --- */}
           <Section label="Appearance">
             <ToggleTile 
-              icon={<Moon />} 
-              label="Dark Mode" 
-              value={darkMode} 
-              onToggle={setDarkMode} 
+              icon={isDarkMode ? <Moon size={20} /> : <Sun size={20} />} 
+              label={isDarkMode ? "Dark Mode Active" : "Light Mode Active"} 
+              value={isDarkMode} 
+              onToggle={toggleTheme} 
             />
           </Section>
 
-          <Section label="Security">
+          {/* --- Security (Change Password Removed) --- */}
+          <Section label="Account Security">
             <NavTile 
-              icon={<ShieldAlert />} 
-              label="Change Password" 
-              onClick={() => {}} 
-            />
-            <NavTile 
-              icon={<Trash2 className="text-red-500" />} 
+              icon={<Trash2 className="text-red-500" size={20} />} 
               label="Deactivate Account" 
               isDestructive 
               onClick={() => navigate('/settings/delete')} 
             />
           </Section>
 
+          {/* --- Footer & Logout --- */}
           <div className="pt-10">
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 p-5 bg-white border border-red-100 text-red-600 font-black rounded-3xl hover:bg-red-50 transition-all shadow-sm"
+              className="w-full flex items-center justify-center gap-3 p-5 bg-[color:var(--color-card-bg)] border border-[color:var(--color-border)] text-red-500 font-black rounded-3xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all shadow-sm"
             >
               <LogOut size={20} /> LOGOUT
             </button>
-            <p className="text-center mt-6 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
+            <p className="text-center mt-6 text-[10px] font-black text-[color:var(--color-text-muted)] uppercase tracking-[0.3em]">
               Q-Stocks Web v1.0.2 (Build 44)
             </p>
           </div>
@@ -58,24 +62,28 @@ const SettingsPage = () => {
   );
 };
 
+// --- Reusable Layout Components ---
+
 const Section = ({ label, children }) => (
   <div className="space-y-3">
-    <p className="ml-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+    <p className="ml-4 text-[10px] font-black text-[color:var(--color-text-muted)] uppercase tracking-widest">
+      {label}
+    </p>
+    <div className="bg-[color:var(--color-card-bg)] rounded-[2rem] border border-[color:var(--color-border)] overflow-hidden shadow-sm">
       {children}
     </div>
   </div>
 );
 
 const ToggleTile = ({ icon, label, value, onToggle }) => (
-  <div className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+  <div className="flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-[color:var(--color-border)] last:border-0">
     <div className="flex items-center gap-4">
-      <div className="text-slate-400">{icon}</div>
-      <span className="font-bold text-slate-700">{label}</span>
+      <div className="text-q-green">{icon}</div>
+      <span className="font-bold text-[color:var(--color-text-main)]">{label}</span>
     </div>
     <button 
-      onClick={() => onToggle(!value)}
-      className={`w-12 h-6 rounded-full transition-all relative ${value ? 'bg-q-green' : 'bg-slate-200'}`}
+      onClick={onToggle}
+      className={`w-12 h-6 rounded-full transition-all relative ${value ? 'bg-q-green' : 'bg-slate-300'}`}
     >
       <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${value ? 'left-7' : 'left-1'}`} />
     </button>
@@ -85,11 +93,13 @@ const ToggleTile = ({ icon, label, value, onToggle }) => (
 const NavTile = ({ icon, label, onClick, isDestructive }) => (
   <button 
     onClick={onClick}
-    className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+    className="w-full flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-[color:var(--color-border)] last:border-0"
   >
     <div className="flex items-center gap-4">
       <div className="text-slate-400">{icon}</div>
-      <span className={`font-bold ${isDestructive ? 'text-red-500' : 'text-slate-700'}`}>{label}</span>
+      <span className={`font-bold ${isDestructive ? 'text-red-500' : 'text-[color:var(--color-text-main)]'}`}>
+        {label}
+      </span>
     </div>
     <ChevronRight size={18} className="text-slate-300" />
   </button>

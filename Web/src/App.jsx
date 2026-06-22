@@ -10,6 +10,7 @@ import OtpPage from './pages/Auth/OtpPage';
 
 // --- Dashboard Module ---
 import DashboardPage from './pages/Dashboard';
+import { ThemeProvider } from './context/ThemeContext';
 
 // --- Shop Management ---
 import MyShopListPage from './pages/Shops';
@@ -50,6 +51,8 @@ const PrivateRoute = ({ children }) => {
 
 const App = () => {
   return (
+        <ThemeProvider>
+
     <Router>
       <Routes>
         {/* ==========================================
@@ -104,7 +107,10 @@ const App = () => {
            ========================================== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      
     </Router>
+        </ThemeProvider>
+
   );
 };
 
