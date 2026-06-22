@@ -92,7 +92,7 @@ func main() {
 	})
 
 	// 6. Serve React Static Files
-	distPath := "/Web/dist"
+	distPath := "Hosting/q-stocks/Web/dist"
 	router.Static("/assets", distPath+"/assets")
 	router.StaticFile("/favicon.ico", distPath+"/favicon.ico")
 	router.StaticFile("/logo.png", distPath+"/logo.png")
