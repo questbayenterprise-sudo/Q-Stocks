@@ -77,28 +77,61 @@ CREATE TABLE IF NOT EXISTS payment_modes (
     is_active   BOOLEAN DEFAULT TRUE,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
+-- ============================================================
+-- 1. SHOPS TABLE
+-- ============================================================
 CREATE TABLE IF NOT EXISTS shops (
-    id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name          VARCHAR(100) NOT NULL,
-    location      TEXT NOT NULL,
-    city_id       INTEGER REFERENCES cities(id),
-    contact_phone VARCHAR(20),
-         description   TEXT,   
-                  image_url TEXT,   
-
-    is_active     BOOLEAN DEFAULT TRUE,
-    created_by    INTEGER REFERENCES users(id),
-    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    location        TEXT NOT NULL,
+    city_id         INTEGER REFERENCES cities(id) ON DELETE SET NULL,
+    contact_phone   VARCHAR(20),
+    description     TEXT,   
+    image_url       TEXT,   
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_by      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ============================================================
+-- 2. SHOP USER MAPPING (Crucial for Manager/Staff access)
+-- ============================================================
 CREATE TABLE IF NOT EXISTS shop_user_mapping (
-    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    shop_id    INTEGER NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
-    is_active  BOOLEAN DEFAULT TRUE
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    shop_id         INTEGER NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, shop_id)
 );
 
+-- ============================================================
+-- 3. AUTOMATIC UPDATED_AT TRIGGER
+-- ============================================================
+-- This ensures that every time you call bal.SaveShop, 
+-- Postgres updates the time automatically.
+
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Attach trigger to shops table
+DROP TRIGGER IF EXISTS update_shop_modtime ON shops;
+CREATE TRIGGER update_shop_modtime
+    BEFORE UPDATE ON shops
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_modified_column();
+
+-- ============================================================
+-- 4. INDEXES (For fast searching in Shop_overall_list)
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_shops_name ON shops(name);
+CREATE INDEX IF NOT EXISTS idx_shop_mapping_user ON shop_user_mapping(user_id);
 -- 4. PRODUCTS & INVENTORY
 CREATE TABLE IF NOT EXISTS categories (
     id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -108,14 +141,15 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 
 CREATE TABLE IF NOT EXISTS products (
-    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    category_id    INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-    name           VARCHAR(100) NOT NULL,
-    uom            VARCHAR(10) DEFAULT 'KG',
-    base_price     NUMERIC(10,2) NOT NULL,
-    is_active      BOOLEAN DEFAULT TRUE,
-    image_url      TEXT,
-    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    category_id     INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    name            VARCHAR(100) NOT NULL,
+    uom             VARCHAR(10) DEFAULT 'KG', -- KG, Piece, Tray
+    base_price      NUMERIC(10,2) NOT NULL,
+    image_url       TEXT,
+    is_active       BOOLEAN DEFAULT TRUE,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS stocks (

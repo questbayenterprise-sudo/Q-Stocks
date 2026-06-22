@@ -2,7 +2,6 @@ package bal
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -78,62 +77,84 @@ func Shop_overall_list(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "rows": shops})
 }
 
-// SaveShop handles both Creating and Updating a shop branch
 func SaveShop(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	idStr := c.PostForm("id") // "0" for new, numeric string for update
+	idStr := c.PostForm("id")
 	name := c.PostForm("name")
 	location := c.PostForm("location")
 	description := c.PostForm("description")
 	userId := c.PostForm("userid")
 
-	// Handle Image Upload
-	file, err := c.FormFile("image")
-	var imagePath string
-	if err == nil {
-		uploadDir := "uploads/shops"
-		os.MkdirAll(uploadDir, 0755)
-		filename := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
-		imagePath = filepath.Join(uploadDir, filename)
-		c.SaveUploadedFile(file, imagePath)
-	} else {
-		imagePath = c.PostForm("existing_image")
-	}
+	file, fileErr := c.FormFile("image")
 
 	tx, err := dal.DB.Begin(ctx)
 	if err != nil {
-		c.JSON(500, gin.H{"success": false, "message": "Internal Server Error"})
+		c.JSON(500, gin.H{"success": false, "message": "DB Transaction Error"})
 		return
 	}
 	defer tx.Rollback(ctx)
 
 	var lastID int
-	if idStr == "" || idStr == "0" {
-		// INSERT NEW SHOP
-		query := `INSERT INTO shops (name, location, description, image_url, created_by) 
-				  VALUES ($1, $2, $3, $4, $5) RETURNING id`
-		err = tx.QueryRow(ctx, query, name, location, description, imagePath, userId).Scan(&lastID)
+	isNew := idStr == "" || idStr == "0"
+
+	// 1. Initial DB Operation
+	if isNew {
+		query := `INSERT INTO shops (name, location, description, created_by) 
+				  VALUES ($1, $2, $3, $4) RETURNING id`
+		err = tx.QueryRow(ctx, query, name, location, description, userId).Scan(&lastID)
 		if err == nil {
-			// Auto map creator to shop
 			tx.Exec(ctx, `INSERT INTO shop_user_mapping (user_id, shop_id, is_active) VALUES ($1, $2, true)`, userId, lastID)
 		}
 	} else {
-		// UPDATE EXISTING SHOP
-		id, _ := strconv.Atoi(idStr)
-		lastID = id
-		query := `UPDATE shops SET name=$1, location=$2, description=$3, image_url=$4, updated_at=NOW() WHERE id=$5`
-		_, err = tx.Exec(ctx, query, name, location, description, imagePath, id)
+		lastID, _ = strconv.Atoi(idStr)
+		query := `UPDATE shops SET name=$1, location=$2, description=$3, updated_at=NOW() WHERE id=$4`
+		_, err = tx.Exec(ctx, query, name, location, description, lastID)
 	}
 
 	if err != nil {
-		log.Printf("SaveShop Error: %v", err)
-		c.JSON(500, gin.H{"success": false, "message": "Failed to save shop"})
+		c.JSON(500, gin.H{"success": false, "message": err.Error()})
 		return
 	}
 
-	tx.Commit(ctx)
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Shop saved successfully", "id": lastID})
+	// 2. Handle Image Processing with Sequence Naming
+	if fileErr == nil {
+		uploadDir := "uploads/shops"
+		os.MkdirAll(uploadDir, 0755)
+
+		// SUGGESTED FILENAME: shop_1_1719000000.jpg
+		extension := filepath.Ext(file.Filename)
+		timestamp := time.Now().Unix()
+		newFileName := fmt.Sprintf("shop_%d_%d%s", lastID, timestamp, extension)
+		imagePath := filepath.Join(uploadDir, newFileName)
+
+		// Convert to web-friendly path (forward slashes)
+		imageWebPath := filepath.ToSlash(imagePath)
+
+		if err := c.SaveUploadedFile(file, imagePath); err != nil {
+			c.JSON(500, gin.H{"success": false, "message": "Failed to save image file"})
+			return
+		}
+
+		// Update the database with the final sequenced path
+		_, err = tx.Exec(ctx, `UPDATE shops SET image_url = $1 WHERE id = $2`, imageWebPath, lastID)
+		if err != nil {
+			c.JSON(500, gin.H{"success": false, "message": "Failed to update image path in DB"})
+			return
+		}
+	}
+
+	// 3. Final Commit
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(500, gin.H{"success": false, "message": "Transaction Commit Failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Shop saved successfully",
+		"id":      lastID,
+	})
 }
 
 // DeleteShop handles deactivating a branch (Soft Delete)

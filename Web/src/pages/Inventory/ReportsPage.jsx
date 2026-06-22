@@ -1,3 +1,6 @@
+
+import autoTable from 'jspdf-autotable'; // Import the function instead of the side-effect
+
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, TrendingUp, Wallet, AlertCircle, 
@@ -5,7 +8,9 @@ import {
   ChevronRight, Loader2 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx'; // Import Excel Library
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf'; // Import jsPDF
+import 'jspdf-autotable'; // Import AutoTable plugin
 import api from '../../api/axiosInstance';
 
 const ReportsPage = () => {
@@ -24,15 +29,11 @@ const ReportsPage = () => {
   const fetchReports = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Global Analytics (Matches bal.GetShopAnalytics)
       const analyticsRes = await api.post('/GetShopAnalytics', {
         user_id: user.id.toString(),
         user_type: user.userType_id
       });
-
-      // 2. Fetch Customer-wise Summary (We can reuse the GetAllCustomers logic)
       const customerRes = await api.get('/GetAllCustomers');
-
       setSummary(analyticsRes.data.data);
       setCustomerSummary(customerRes.data.data || []);
     } catch (err) {
@@ -50,11 +51,47 @@ const ReportsPage = () => {
       "Pending Balance": c.current_balance,
       "Status": c.current_balance > 0 ? "Owed" : "Settled"
     }));
-
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Dues");
     XLSX.writeFile(workbook, `Shop_Report_${new Date().toLocaleDateString()}.xlsx`);
+  };
+
+  // --- NEW: PDF EXPORT LOGIC ---
+  const exportToPdf = () => {
+    const doc = new jsPDF();
+    
+    // Add Title
+    doc.setFontSize(18);
+    doc.text("Q-Stocks Business Report", 14, 22);
+    
+    // Add Subtitle/Date
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    doc.text(`Total Sales: Rs. ${summary.total_revenue}`, 14, 38);
+    doc.text(`Pending Dues: Rs. ${summary.occupancy}`, 14, 46);
+
+    // Create Table Data
+    const tableColumn = ["Customer Name", "Phone", "Balance (Rs.)", "Status"];
+    const tableRows = customerSummary.map(c => [
+      c.name,
+      c.phone || '---',
+      c.current_balance.toFixed(2),
+      c.current_balance > 0 ? "Owed" : "Settled"
+    ]);
+
+    // FIXED: Use autoTable as a function call directly
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 55,
+      theme: 'grid',
+      headStyles: { fillColor: [0, 163, 108] }, // Use fillColor instead of fillStyle
+      styles: { fontSize: 9 }
+    });
+
+    doc.save(`Shop_Report_${new Date().getTime()}.pdf`);
   };
 
   const filteredCustomers = customerSummary.filter(c => 
@@ -65,7 +102,6 @@ const ReportsPage = () => {
     <div className="min-h-screen bg-[#F8F9FA] p-6 lg:p-10">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header & Export Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
@@ -82,7 +118,12 @@ const ReportsPage = () => {
               <FileSpreadsheet size={18} className="text-green-600" />
               <span>EXCEL</span>
             </button>
-            <button className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-3 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+            
+            {/* FIXED: Added onClick={exportToPdf} */}
+            <button 
+              onClick={exportToPdf}
+              className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-3 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+            >
               <FileText size={18} className="text-red-500" />
               <span>PDF</span>
             </button>
@@ -91,24 +132,9 @@ const ReportsPage = () => {
 
         {/* Analytics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <StatCard 
-            label="Total Sales" 
-            value={`₹${summary.total_revenue}`} 
-            icon={<TrendingUp />} 
-            color="bg-emerald-500" 
-          />
-          <StatCard 
-            label="Stock Weight" 
-            value={`${summary.total_bookings} kg`} 
-            icon={<Wallet />} 
-            color="bg-blue-500" 
-          />
-          <StatCard 
-            label="Pending Dues" 
-            value={`₹${summary.occupancy}`} 
-            icon={<AlertCircle />} 
-            color="bg-red-500" 
-          />
+          <StatCard label="Total Sales" value={`₹${summary.total_revenue}`} icon={<TrendingUp />} color="bg-emerald-500" />
+          <StatCard label="Stock Weight" value={`${summary.total_bookings} kg`} icon={<Wallet />} color="bg-blue-500" />
+          <StatCard label="Pending Dues" value={`₹${summary.occupancy}`} icon={<AlertCircle />} color="bg-red-500" />
         </div>
 
         {/* Customer Breakdown Section */}
@@ -168,7 +194,6 @@ const ReportsPage = () => {
   );
 };
 
-// Internal Sub-component for Stats
 const StatCard = ({ label, value, icon, color }) => (
   <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-6">
     <div className={`w-14 h-14 rounded-2xl ${color} text-white flex items-center justify-center shadow-lg shadow-slate-100`}>
