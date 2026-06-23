@@ -1,3 +1,4 @@
+import PendingPayments from './pages/Inventory/PendingPayments';
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -7,6 +8,7 @@ import MainLayout from './layouts/MainLayout';
 // --- Auth Modules ---
 import LoginPage from './pages/Auth/LoginPage';
 import OtpPage from './pages/Auth/OtpPage';
+import IncomeListPage from './pages/Inventory/IncomeListPage';
 
 // --- Dashboard Module ---
 import DashboardPage from './pages/Dashboard';
@@ -65,7 +67,8 @@ const App = () => {
             PRIVATE ROUTES (Authenticated Area)
            ========================================== */}
         <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-          
+          <Route path="/income-entry" element={<IncomeListPage />} />       {/* The List */}
+
           {/* Dashboard */}
           <Route path="/home" element={<DashboardPage />} />
 
@@ -96,7 +99,7 @@ const App = () => {
           
           {/* Reports */}
           <Route path="/reports" element={<ReportsPage />} />
-
+<Route path="/inventory/pending" element={<PendingPayments />} />
           {/* General Placeholders */}
           <Route path="/settings" element={<div className="p-10 font-bold">App Settings - Mobile Style Coming Soon</div>} />
           <Route path="/profile" element={<div className="p-10 font-bold">User Profile - Mobile Style Coming Soon</div>} />

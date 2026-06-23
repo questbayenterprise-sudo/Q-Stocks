@@ -19,3 +19,7 @@ export const updateStock = async (data) => {
   const res = await api.post('/UpdateStock', data);
   return res.data;
 };
+export const getPendingPayments = async () => {
+  const res = await api.post('/GetPendingPayments');
+  return res.data.data || [];
+};

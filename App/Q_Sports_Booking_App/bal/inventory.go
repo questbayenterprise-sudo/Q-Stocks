@@ -1,6 +1,8 @@
 package bal
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	dal "github.com/qsports/q-stocks-app/dal"
 )
@@ -40,41 +42,6 @@ func GetIncomeHistory(c *gin.Context) {
 		})
 	}
 	c.JSON(200, gin.H{"success": true, "data": results})
-}
-
-// SaveIncome - Records a payment and reduces customer balance
-func SaveIncome(c *gin.Context) {
-	var req struct {
-		CustomerID int     `json:"customer_id"`
-		ShopID     int     `json:"shop_id"`
-		Amount     float64 `json:"amount"`
-		Remarks    string  `json:"remarks"`
-	}
-	c.ShouldBindJSON(&req)
-	ctx := c.Request.Context()
-
-	tx, _ := dal.DB.Begin(ctx)
-	defer tx.Rollback(ctx)
-
-	// 1. Reduce Customer Balance
-	_, err := tx.Exec(ctx, `UPDATE customers SET current_balance = current_balance - $1 WHERE id = $2`, req.Amount, req.CustomerID)
-
-	// 2. Get New Balance for Snapshot
-	var newBal float64
-	tx.QueryRow(ctx, `SELECT current_balance FROM customers WHERE id = $1`, req.CustomerID).Scan(&newBal)
-
-	// 3. Insert into Ledger
-	query := `INSERT INTO customer_ledger (customer_id, shop_id, debit_amount, credit_amount, running_balance, remarks, transaction_date)
-	          VALUES ($1, $2, 0, $3, $4, $5, NOW())`
-	_, err = tx.Exec(ctx, query, req.CustomerID, req.ShopID, req.Amount, newBal, req.Remarks)
-
-	if err != nil {
-		c.JSON(500, gin.H{"success": false, "message": "Save failed"})
-		return
-	}
-
-	tx.Commit(ctx)
-	c.JSON(200, gin.H{"success": true})
 }
 
 // ============================================================
@@ -134,4 +101,76 @@ func UpdateStock(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"success": true})
+}
+func GetPendingPayments(c *gin.Context) {
+	query := `SELECT id, name, COALESCE(phone, '') as phone, current_balance 
+	          FROM customers WHERE current_balance > 0 AND is_active = true 
+	          ORDER BY current_balance DESC`
+
+	rows, err := dal.DB.Query(c.Request.Context(), query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	results := []interface{}{}
+	for rows.Next() {
+		var id int
+		var name, phone string
+		var balance float64
+		rows.Scan(&id, &name, &phone, &balance)
+		results = append(results, gin.H{
+			"id":              id,
+			"name":            name,
+			"phone":           phone,
+			"current_balance": balance,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": results})
+}
+
+// SaveIncome - Records a payment and updates balance (Transaction based)
+func SaveIncome(c *gin.Context) {
+	var req struct {
+		CustomerID int     `json:"customer_id"`
+		ShopID     int     `json:"shop_id"`
+		Amount     float64 `json:"amount"`
+		Remarks    string  `json:"remarks"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Invalid input"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	tx, err := dal.DB.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "DB Transaction Error"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Deduct from customer balance
+	_, err = tx.Exec(ctx, `UPDATE customers SET current_balance = current_balance - $1 WHERE id = $2`, req.Amount, req.CustomerID)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "message": "Failed to update balance"})
+		return
+	}
+
+	// 2. Get the new balance for the ledger snapshot
+	var newBalance float64
+	tx.QueryRow(ctx, `SELECT current_balance FROM customers WHERE id = $1`, req.CustomerID).Scan(&newBalance)
+
+	// 3. Insert Ledger Entry (Notebook View)
+	ledgerQuery := `INSERT INTO customer_ledger (customer_id, shop_id, debit_amount, credit_amount, running_balance, remarks, transaction_date) 
+	                VALUES ($1, $2, 0, $3, $4, $5, NOW())`
+	_, err = tx.Exec(ctx, ledgerQuery, req.CustomerID, req.ShopID, req.Amount, newBalance, req.Remarks)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "message": "Failed to save ledger entry"})
+		return
+	}
+
+	tx.Commit(ctx)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Payment recorded successfully"})
 }

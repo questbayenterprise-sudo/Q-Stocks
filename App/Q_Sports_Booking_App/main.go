@@ -88,7 +88,7 @@ func main() {
 		api.GET("/GetAllCustomers", bal.GetAllCustomers)
 		api.POST("/CreateCustomer", bal.CreateCustomer)
 		api.POST("/GetCustomerLedger", bal.GetCustomerLedger)
-
+		api.POST("/GetPendingPayments", bal.GetPendingPayments)
 		// Dashboard Analytics
 		api.POST("/GetShopAnalytics", bal.GetShopAnalytics)
 		api.POST("/GetRecentSales", bal.GetRecentSales)
