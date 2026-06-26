@@ -12,7 +12,6 @@ const Sidebar = () => {
   const location = useLocation();
   const [inventoryOpen, setInventoryOpen] = useState(true);
 
-  // Top level main modules
   const menuItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/home' },
     { label: 'My Shops', icon: Store, path: '/shops' },
@@ -20,11 +19,10 @@ const Sidebar = () => {
     { label: 'Customers', icon: Users, path: '/customers' },
   ];
 
-  // Inventory sub-menu items (Matches your new pages)
   const inventorySubItems = [
     { label: 'Sales History', icon: Receipt, path: '/sales' },
-    { label: 'Pending Payments', icon: HandCoins, path: '/inventory/pending' }, // Added
-    { label: 'Income Entry', icon: Wallet2, path: '/income-entry' },            // Added
+    { label: 'Pending Payments', icon: HandCoins, path: '/inventory/pending' },
+    { label: 'Income Entry', icon: Wallet2, path: '/income-entry' },
     { label: 'Stocks', icon: Warehouse, path: '/stocks' },
     { label: 'Reports', icon: BarChart3, path: '/reports' },
   ];
@@ -38,13 +36,16 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-slate-100 flex flex-col sticky top-0 z-40 transition-colors duration-300 dark:bg-slate-900 dark:border-slate-800">
+    // UNIFIED: Using bg-card-bg and border-border-main
+    <aside className="w-64 h-screen bg-card-bg border-r border-border-main flex flex-col sticky top-0 z-40 transition-colors duration-300">
+      
       {/* Branding Area */}
       <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-q-green flex items-center justify-center shadow-lg shadow-green-100 p-2">
+        <div className="w-10 h-10 rounded-xl bg-q-green flex items-center justify-center shadow-lg shadow-q-green/20 p-2">
           <img src={APP_CONFIG.logoPath} alt="Logo" className="w-full h-full object-contain" />
         </div>
-        <span className="text-xl font-black text-slate-800 tracking-tight dark:text-white">Q-Stocks</span>
+        {/* UNIFIED: text-text-main */}
+        <span className="text-xl font-black text-text-main tracking-tight">Q-Stocks</span>
       </div>
 
       {/* Navigation Links */}
@@ -56,7 +57,8 @@ const Sidebar = () => {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive(item.path) 
                 ? 'bg-q-green/10 text-q-green' 
-                : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+                // UNIFIED: text-text-muted and bg-app-bg for hover
+                : 'text-text-muted hover:bg-app-bg hover:text-text-main'
             }`}
           >
             <item.icon size={20} strokeWidth={isActive(item.path) ? 2.5 : 2} />
@@ -68,7 +70,8 @@ const Sidebar = () => {
         <div className="pt-4">
           <button
             onClick={() => setInventoryOpen(!inventoryOpen)}
-            className="w-full flex items-center gap-3 px-4 py-2 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] mb-1 hover:text-slate-600 transition-colors"
+            // UNIFIED: text-text-muted
+            className="w-full flex items-center gap-3 px-4 py-2 text-text-muted font-black text-[10px] uppercase tracking-[0.2em] mb-1 hover:text-text-main transition-colors"
           >
             Inventory
             <ChevronDown size={14} className={`ml-auto transition-transform duration-300 ${inventoryOpen ? 'rotate-180' : ''}`} />
@@ -83,7 +86,7 @@ const Sidebar = () => {
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
                     isActive(sub.path) 
                       ? 'bg-q-green/10 text-q-green' 
-                      : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+                      : 'text-text-muted hover:bg-app-bg hover:text-text-main'
                   }`}
                 >
                   <sub.icon size={18} strokeWidth={isActive(sub.path) ? 2.5 : 2} />
@@ -96,11 +99,13 @@ const Sidebar = () => {
       </nav>
 
       {/* Bottom Profile/Settings */}
-      <div className="p-4 border-t border-slate-50 dark:border-slate-800 space-y-1">
+      {/* UNIFIED: border-border-main */}
+      <div className="p-4 border-t border-border-main space-y-1">
         <button 
           onClick={() => navigate('/settings')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
-            isActive('/settings') ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+            // UNIFIED: bg-app-bg for active setting
+            isActive('/settings') ? 'bg-app-bg text-text-main' : 'text-text-muted hover:bg-app-bg hover:text-text-main'
           }`}
         >
           <Settings size={20} />
@@ -108,7 +113,7 @@ const Sidebar = () => {
         </button>
         <button 
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors font-bold text-sm"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors font-bold text-sm"
         >
           <LogOut size={20} />
           Logout

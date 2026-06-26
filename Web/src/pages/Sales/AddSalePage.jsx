@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Save, ShoppingCart, User, Store, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, ShoppingCart, User, Store, Loader2, IndianRupee } from 'lucide-react';
 import { getProducts } from '../../api/productApi';
 import { getCustomers } from '../../api/customerApi';
 import { fetchShops } from '../../api/shopApi';
@@ -13,7 +13,6 @@ const AddSalePage = () => {
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Form State
   const [selectedShop, setSelectedShop] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [items, setItems] = useState([{ product_id: '', quantity: 1, price: 0, total: 0 }]);
@@ -21,10 +20,18 @@ const AddSalePage = () => {
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user'));
-    getProducts().then(setProducts);
-    getCustomers().then(setCustomers);
-    fetchShops(user.id, user.userType_id).then(setShops);
-  }, []);
+    if (!user) return navigate('/');
+
+    Promise.all([
+      getProducts(),
+      getCustomers(),
+      fetchShops(user.id, user.userType_id)
+    ]).then(([p, c, s]) => {
+      setProducts(p);
+      setCustomers(c);
+      setShops(s);
+    });
+  }, [navigate]);
 
   const addItem = () => setItems([...items, { product_id: '', quantity: 1, price: 0, total: 0 }]);
   
@@ -41,107 +48,174 @@ const AddSalePage = () => {
     setItems(newItems);
   };
 
-  const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
+  const removeItem = (index) => {
+    if (items.length > 1) setItems(items.filter((_, i) => i !== index));
+  };
 
   const subTotal = items.reduce((sum, item) => sum + item.total, 0);
   const balance = subTotal - paidAmount;
 
   const handleSubmit = async (status) => {
-    if (!selectedShop || !selectedCustomer) return alert("Select Shop & Customer");
+    if (!selectedShop || !selectedCustomer) return alert("Please select Shop and Customer");
     setLoading(true);
     try {
       await processSale({
         shop_id: parseInt(selectedShop),
         customer_id: parseInt(selectedCustomer),
-        total_amount: subTotal,
-        paid_amount: parseFloat(paidAmount),
+        total_amount: Number(subTotal),
+        paid_amount: Number(paidAmount),
         status: status,
-        items: items
+        items: items.map(item => ({
+          product_id: parseInt(item.product_id),
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          total: Number(item.total)
+        }))
       });
       navigate('/sales');
     } catch (err) {
-      alert("Sale failed");
+      alert("Transaction failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+    // UNIFIED: bg-app-bg, text-text-h
+    <div className="min-h-screen bg-app-bg p-4 md:p-8 transition-colors duration-300">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Side: Invoice Items */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-            <h2 className="text-xl font-black mb-6 flex items-center gap-2">
-              <ShoppingCart className="text-q-green" /> New Invoice
+          {/* UNIFIED: bg-card-bg, border-border-v */}
+          <div className="bg-card-bg p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-border-v transition-colors">
+            <h2 className="text-2xl font-black text-text-h mb-8 flex items-center gap-3">
+              <div className="p-2 bg-q-green/10 rounded-xl text-q-green">
+                <ShoppingCart size={24} />
+              </div>
+              New Invoice
             </h2>
             
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <select onChange={(e) => setSelectedShop(e.target.value)} className="p-4 bg-slate-50 rounded-2xl border-none outline-none font-bold text-sm">
-                <option value="">Select Shop</option>
-                {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              <select onChange={(e) => setSelectedCustomer(e.target.value)} className="p-4 bg-slate-50 rounded-2xl border-none outline-none font-bold text-sm">
-                <option value="">Select Customer</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+            {/* Header Selects */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-text-m uppercase tracking-widest ml-2">Branch</label>
+                <select 
+                  onChange={(e) => setSelectedShop(e.target.value)} 
+                  className="w-full p-4 bg-app-bg text-text-h rounded-2xl border border-border-v outline-none focus:border-q-green font-bold text-sm appearance-none"
+                >
+                  <option value="">Select Shop</option>
+                  {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-text-m uppercase tracking-widest ml-2">Customer</label>
+                <select 
+                  onChange={(e) => setSelectedCustomer(e.target.value)} 
+                  className="w-full p-4 bg-app-bg text-text-h rounded-2xl border border-border-v outline-none focus:border-q-green font-bold text-sm appearance-none"
+                >
+                  <option value="">Select Customer</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
             </div>
 
+            {/* Product Rows */}
             <div className="space-y-4">
               {items.map((item, index) => (
-                <div key={index} className="flex flex-wrap md:flex-nowrap gap-3 items-center bg-slate-50 p-4 rounded-2xl">
-                  <select 
-                    className="flex-1 min-w-[150px] bg-transparent font-bold outline-none"
-                    onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                <div key={index} className="flex flex-wrap md:flex-nowrap gap-4 items-center bg-app-bg/50 p-5 rounded-[1.8rem] border border-border-v group transition-all">
+                  <div className="flex-1 min-w-[200px] space-y-1">
+                    <label className="text-[9px] font-black text-text-m uppercase tracking-tighter">Product</label>
+                    <select 
+                      className="w-full bg-transparent text-text-h font-black outline-none cursor-pointer"
+                      onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                    >
+                      <option value="">Select Product</option>
+                      {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="w-24 space-y-1">
+                    <label className="text-[9px] font-black text-text-m uppercase tracking-tighter">Qty</label>
+                    <input 
+                      type="number" className="w-full bg-card-bg text-text-h p-2 rounded-xl text-center font-bold border border-border-v outline-none focus:border-q-green"
+                      value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="w-32 text-right space-y-1">
+                    <label className="text-[9px] font-black text-text-m uppercase tracking-tighter">Subtotal</label>
+                    <div className="font-black text-q-green text-lg">₹{item.total.toLocaleString()}</div>
+                  </div>
+
+                  <button 
+                    onClick={() => removeItem(index)} 
+                    className="p-2 text-text-m hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                   >
-                    <option value="">Select Product</option>
-                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <input 
-                    type="number" placeholder="Qty" className="w-20 bg-white p-2 rounded-xl text-center font-bold"
-                    value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                  />
-                  <div className="w-24 text-right font-black text-q-green">₹{item.total}</div>
-                  <button onClick={() => removeItem(index)} className="text-red-400 p-2"><Trash2 size={18}/></button>
+                    <Trash2 size={20}/>
+                  </button>
                 </div>
               ))}
             </div>
 
-            <button onClick={addItem} className="mt-6 w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl font-bold text-slate-400 hover:border-q-green hover:text-q-green transition-all">
-              + ADD ITEM
+            <button 
+              onClick={addItem} 
+              className="mt-8 w-full py-5 border-2 border-dashed border-border-v rounded-3xl font-black text-text-m hover:border-q-green hover:text-q-green hover:bg-q-green/5 transition-all uppercase tracking-widest text-xs"
+            >
+              + Add Item to Bill
             </button>
           </div>
         </div>
 
-        {/* Right Side: Summary Card */}
+        {/* Right Side: Sticky Summary Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 sticky top-8">
-            <h3 className="font-black text-slate-800 mb-6">Bill Summary</h3>
-            <div className="space-y-4 mb-8">
-              <div className="flex justify-between text-slate-500 font-medium"><span>Subtotal</span><span>₹{subTotal}</span></div>
-              <div className="flex flex-col gap-2">
-                <span className="text-sm font-bold text-slate-700">Advance Paid</span>
-                <input 
-                   type="number" className="w-full p-3 bg-slate-50 rounded-xl font-black text-q-green outline-none"
-                   value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
-                />
+          <div className="bg-card-bg p-8 rounded-[2.5rem] shadow-2xl border border-border-v sticky top-8 transition-colors">
+            <h3 className="font-black text-text-h text-xl mb-8 uppercase tracking-tight">Checkout</h3>
+            
+            <div className="space-y-5 mb-8">
+              <div className="flex justify-between text-text-m font-bold uppercase text-[10px] tracking-widest">
+                <span>Subtotal</span>
+                <span className="text-text-h text-sm font-black">₹{subTotal.toLocaleString()}</span>
+              </div>
+
+              <div className="pt-4 border-t border-border-v space-y-2">
+                <label className="text-[10px] font-black text-text-m uppercase tracking-widest">Advance Payment</label>
+                <div className="relative">
+                  <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-q-green" size={18} />
+                  <input 
+                    type="number" 
+                    className="w-full pl-12 p-4 bg-app-bg text-text-h rounded-2xl font-black text-xl outline-none border border-border-v focus:border-q-green"
+                    value={paidAmount} 
+                    onChange={(e) => setPaidAmount(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-            <div className="border-t pt-6 mb-8">
-              <div className="flex justify-between items-end">
-                <span className="font-bold text-slate-400 text-xs uppercase tracking-widest">Balance Due</span>
-                <span className="text-3xl font-black text-red-500">₹{balance}</span>
+
+            <div className="bg-app-bg p-6 rounded-3xl border border-border-v mb-8">
+              <div className="flex justify-between items-center">
+                <span className="font-black text-text-m text-[10px] uppercase tracking-widest">Balance Due</span>
+                <span className={`text-3xl font-black ${balance > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                  ₹{balance.toLocaleString()}
+                </span>
               </div>
             </div>
-            <div className="space-y-3">
+
+            <div className="space-y-4">
               <button 
-                onClick={() => handleSubmit('COMPLETED')} disabled={loading}
-                className="w-full bg-q-green text-white font-black py-4 rounded-2xl shadow-lg shadow-green-100 flex justify-center items-center gap-2"
+                onClick={() => handleSubmit('COMPLETED')} 
+                disabled={loading}
+                className="w-full bg-q-green hover:bg-q-green-dark text-white font-black py-5 rounded-3xl shadow-xl shadow-q-green/20 flex justify-center items-center gap-3 transition-all active:scale-95 disabled:opacity-50"
               >
-                {loading ? <Loader2 className="animate-spin" /> : <><Save size={20}/> COMPLETE SALE</>}
+                {loading ? <Loader2 className="animate-spin" /> : <><Save size={22}/> COMPLETE SALE</>}
               </button>
-              <button className="w-full py-4 font-bold text-slate-400 hover:text-slate-600">SAVE AS DRAFT</button>
+              
+              <button 
+                onClick={() => handleSubmit('DRAFT')}
+                className="w-full py-4 font-black text-text-m hover:text-text-h transition-colors uppercase text-[10px] tracking-[0.2em]"
+              >
+                Save as Draft
+              </button>
             </div>
           </div>
         </div>

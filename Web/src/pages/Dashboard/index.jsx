@@ -16,7 +16,6 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Memoized Load Function to prevent unnecessary re-creations
   const loadData = useCallback(async (showFullLoader = true) => {
     if (showFullLoader) setLoading(true);
     else setIsRefreshing(true);
@@ -24,7 +23,7 @@ const DashboardPage = () => {
     try {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
-        navigate('/'); // Redirect to login if session missing
+        navigate('/');
         return;
       }
       
@@ -41,39 +40,35 @@ const DashboardPage = () => {
   }, [navigate]);
 
   useEffect(() => {
-    // This guard ensures that even in Strict Mode, 
-    // we handle the data flow gracefully.
     let isMounted = true;
-
-    if (isMounted) {
-      loadData(true);
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    if (isMounted) loadData(true);
+    return () => { isMounted = false; };
   }, [loadData]);
 
+  // --- UNIFIED LOADING SCREEN ---
   if (loading) return (
-    <div className="flex h-screen flex-col items-center justify-center bg-slate-50">
+    <div className="flex h-screen flex-col items-center justify-center bg-app-bg transition-colors duration-300">
       <div className="h-12 w-12 animate-spin rounded-full border-4 border-q-green border-t-transparent"></div>
-      <p className="mt-4 font-black text-slate-400 animate-pulse tracking-widest uppercase text-xs">
+      <p className="mt-4 font-black text-text-m animate-pulse tracking-widest uppercase text-[10px]">
         Establishing Secure Connection...
       </p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-4 md:p-8 lg:p-12">
+    // UNIFIED: bg-app-bg (Switches between light grey and dark slate)
+    <div className="min-h-screen bg-app-bg p-4 md:p-8 lg:p-12 transition-colors duration-300">
       <div className="max-w-7xl mx-auto space-y-8 pb-24">
         
-        {/* Header with Manual Refresh */}
+        {/* Header Section */}
         <div className="flex items-center justify-between">
           <DashboardHeader />
+          
+          {/* UNIFIED: bg-card-bg and border-border-v */}
           <button 
             onClick={() => loadData(false)}
             disabled={isRefreshing}
-            className={`p-3 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-q-green transition-all shadow-sm ${isRefreshing ? 'animate-spin text-q-green' : ''}`}
+            className={`p-3 rounded-2xl bg-card-bg border border-border-v text-text-m hover:text-q-green transition-all shadow-sm active:scale-90 ${isRefreshing ? 'animate-spin text-q-green' : ''}`}
           >
             <RefreshCw size={20} />
           </button>
@@ -98,10 +93,11 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Floating Action Button (FAB) - Visible on Desktop/Mobile */}
+      {/* Floating Action Button (FAB) */}
       <button 
         onClick={() => navigate('/sales/new')}
-        className="fixed bottom-8 right-6 md:right-12 bg-q-green hover:bg-q-green-dark text-white px-6 py-4 rounded-3xl shadow-2xl shadow-green-200 transition-all active:scale-95 flex items-center gap-3 z-50 group"
+        // Note: Brand colors like q-green usually stay constant in both modes
+        className="fixed bottom-8 right-6 md:right-12 bg-q-green hover:bg-q-green-dark text-white px-6 py-4 rounded-3xl shadow-2xl shadow-q-green/20 transition-all active:scale-95 flex items-center gap-3 z-50 group"
       >
         <Plus size={24} className="group-hover:rotate-90 transition-transform duration-300" />
         <span className="font-black text-sm tracking-wide">NEW SALE</span>

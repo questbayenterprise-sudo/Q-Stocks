@@ -6,38 +6,42 @@ const RecentSales = ({ sales }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm h-full flex flex-col">
+    // UNIFIED: bg-card-bg, border-border-main, text-text-main
+    <div className="bg-card-bg p-8 rounded-[2.5rem] border border-border-main shadow-sm h-full flex flex-col transition-colors duration-300">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h3 className="text-lg font-black text-slate-800">Recent Sales</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</p>
+          <h3 className="text-lg font-black text-text-main uppercase tracking-tight">Recent Sales</h3>
+          {/* UNIFIED: text-text-muted */}
+          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Latest Transactions</p>
         </div>
         <button 
           onClick={() => navigate('/sales')} 
-          className="text-xs font-bold text-q-green hover:underline flex items-center gap-1"
+          className="text-xs font-bold text-q-green hover:underline flex items-center gap-1 transition-all active:scale-95"
         >
           VIEW ALL <ChevronRight size={14} />
         </button>
       </div>
 
-      <div className="space-y-4 flex-1 overflow-y-auto">
+      <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar">
         {sales && sales.length > 0 ? (
           sales.map((sale) => (
             <div 
               key={sale.id} 
-              className="flex items-center gap-4 rounded-2xl bg-slate-50 p-4 hover:bg-slate-100 transition-all cursor-pointer group border border-transparent hover:border-slate-200"
+              // UNIFIED: bg-app-bg (the lighter grey/dark blue background)
+              className="flex items-center gap-4 rounded-2xl bg-app-bg p-4 hover:brightness-95 dark:hover:brightness-110 transition-all cursor-pointer group border border-transparent hover:border-border-main"
             >
-              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                <ReceiptText size={18} className="text-slate-400 group-hover:text-q-green" />
+              {/* UNIFIED: bg-card-bg for the icon circle */}
+              <div className="w-10 h-10 rounded-full bg-card-bg flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                <ReceiptText size={18} className="text-text-muted group-hover:text-q-green" />
               </div>
               
               <div className="flex-1">
-                <p className="text-sm font-bold text-slate-800">Order #{sale.booking_ref}</p>
-                <p className="text-[11px] text-slate-500 font-medium">{sale.user_name}</p>
+                <p className="text-sm font-bold text-text-main">Order #{sale.booking_ref}</p>
+                <p className="text-[11px] text-text-muted font-medium">{sale.user_name}</p>
               </div>
               
               <div className="text-right">
-                <p className="font-black text-slate-900 text-sm">₹{sale.price}</p>
+                <p className="font-black text-text-main text-sm">₹{sale.price}</p>
                 <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-q-green/10 text-q-green uppercase tracking-tighter">
                   {sale.status}
                 </span>
@@ -46,8 +50,9 @@ const RecentSales = ({ sales }) => {
           ))
         ) : (
           <div className="flex flex-col items-center justify-center h-full py-10">
-            <ReceiptText size={48} className="text-slate-100 mb-2" />
-            <p className="text-sm font-bold text-slate-300 italic">No sales found today</p>
+            {/* UNIFIED: text-border-main for the empty state icon */}
+            <ReceiptText size={48} className="text-border-main mb-2" />
+            <p className="text-sm font-bold text-text-muted italic">No sales found today</p>
           </div>
         )}
       </div>

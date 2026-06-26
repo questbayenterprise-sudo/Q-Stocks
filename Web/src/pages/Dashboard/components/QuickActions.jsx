@@ -6,24 +6,31 @@ const QuickActions = () => {
   const navigate = useNavigate();
 
   const actions = [
-    { label: "Products", icon: ShoppingBasket, color: "bg-orange-50 text-orange-600", path: "/products" },
-    { label: "Ledger", icon: NotebookText, color: "bg-blue-50 text-blue-600", path: "/customers" },
-    { label: "Stocks", icon: Warehouse, color: "bg-teal-50 text-teal-600", path: "/stocks" },
-    { label: "Reports", icon: BarChart3, color: "bg-purple-50 text-purple-600", path: "/reports" },
+    // Using 500-weight colors with opacity (applied in JSX) for a unified look
+    { label: "Products", icon: ShoppingBasket, color: "text-orange-500", bgColor: "bg-orange-500/10", path: "/products" },
+    { label: "Ledger", icon: NotebookText, color: "text-blue-500", bgColor: "bg-blue-500/10", path: "/customers" },
+    { label: "Stocks", icon: Warehouse, color: "text-teal-500", bgColor: "bg-teal-500/10", path: "/stocks" },
+    { label: "Reports", icon: BarChart3, color: "text-purple-500", bgColor: "bg-purple-500/10", path: "/reports" },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 transition-colors duration-300">
       {actions.map((action, i) => (
         <button
           key={i}
           onClick={() => navigate(action.path)}
-          className="flex flex-col items-center gap-3 p-6 bg-white rounded-[2rem] border border-slate-50 shadow-sm hover:shadow-md transition-all active:scale-95 group"
+          // UNIFIED: bg-card-bg, border-border-v, hover:bg-app-bg
+          className="flex flex-col items-center gap-3 p-6 bg-card-bg rounded-[2rem] border border-border-v shadow-sm hover:shadow-md hover:bg-app-bg transition-all active:scale-95 group"
         >
-          <div className={`p-4 rounded-2xl ${action.color} group-hover:scale-110 transition-transform`}>
-            <action.icon size={24} />
+          {/* Icon Container with dynamic opacity background */}
+          <div className={`p-4 rounded-2xl ${action.bgColor} ${action.color} group-hover:scale-110 transition-transform duration-300`}>
+            <action.icon size={26} strokeWidth={2.5} />
           </div>
-          <span className="text-sm font-bold text-slate-700">{action.label}</span>
+          
+          {/* UNIFIED: text-text-h (High contrast text) */}
+          <span className="text-sm font-black text-text-h tracking-tight">
+            {action.label}
+          </span>
         </button>
       ))}
     </div>

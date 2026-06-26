@@ -1,12 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Moon, ChevronRight, LogOut, Trash2, Sun } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext'; // Import the global hook
+import { Moon, ChevronRight, LogOut, Trash2, Sun, Loader2 } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { updateSettings } from '../../api/profileApi'; // Ensure this API method exists
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  // Using the unified theme state
   const { isDarkMode, toggleTheme } = useTheme();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Get current user from session
+  const user = JSON.parse(localStorage.getItem('user'));
+
+  // --- Unified Toggle Logic ---
+  const handleThemeToggle = async () => {
+    // 1. Update UI Instantly for best UX
+    toggleTheme();
+
+    // 2. Sync with Golang Backend (tbl_user_settings)
+    if (user?.id) {
+      setIsSyncing(true);
+      try {
+        await updateSettings({
+          user_id: user.id.toString(),
+          themes: !isDarkMode ? 'dark' : 'light' // Toggle logic
+        });
+      } catch (err) {
+        console.error("Failed to sync theme to server:", err);
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -14,47 +39,61 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[color:var(--color-app-bg)] p-6 md:p-10 transition-colors duration-300">
+    <div className="min-h-screen bg-app-bg p-4 md:p-10 transition-colors duration-300">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-black text-[color:var(--color-text-main)] mb-2">
-          Settings
-        </h1>
-        <p className="text-[color:var(--color-text-muted)] font-medium mb-10">
-          Configure your app experience.
-        </p>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-black text-text-h tracking-tight">Settings</h1>
+          {isSyncing && (
+            <div className="flex items-center gap-2 text-[10px] font-bold text-q-green animate-pulse">
+              <Loader2 size={12} className="animate-spin" /> SYNCING...
+            </div>
+          )}
+        </div>
+        <p className="text-text-m font-medium mb-10">Configure your enterprise shop experience.</p>
 
         <div className="space-y-8">
-          {/* --- Appearance --- */}
+          
+          {/* --- Appearance Section --- */}
           <Section label="Appearance">
             <ToggleTile 
               icon={isDarkMode ? <Moon size={20} /> : <Sun size={20} />} 
-              label={isDarkMode ? "Dark Mode Active" : "Light Mode Active"} 
+              label="Dark Mode" 
+              subLabel="Adjust the interface for low-light environments"
               value={isDarkMode} 
-              onToggle={toggleTheme} 
+              onToggle={handleThemeToggle} 
             />
           </Section>
 
-          {/* --- Security (Change Password Removed) --- */}
+          {/* --- Security Section --- */}
           <Section label="Account Security">
             <NavTile 
               icon={<Trash2 className="text-red-500" size={20} />} 
               label="Deactivate Account" 
+              subLabel="Permanently revoke your access to this shop"
               isDestructive 
               onClick={() => navigate('/settings/delete')} 
             />
           </Section>
 
-          {/* --- Footer & Logout --- */}
-          <div className="pt-10">
+          {/* --- Logout & Version Info --- */}
+          <div className="pt-10 space-y-6">
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 p-5 bg-[color:var(--color-card-bg)] border border-[color:var(--color-border)] text-red-500 font-black rounded-3xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all shadow-sm"
+              className="w-full flex items-center justify-center gap-3 p-5 bg-card-bg border border-border-v text-red-500 font-black rounded-3xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all shadow-sm active:scale-[0.98]"
             >
-              <LogOut size={20} /> LOGOUT
+              <LogOut size={20} /> LOGOUT FROM SYSTEM
             </button>
-            <p className="text-center mt-6 text-[10px] font-black text-[color:var(--color-text-muted)] uppercase tracking-[0.3em]">
-              Q-Stocks Web v1.0.2 (Build 44)
-            </p>
+            
+            <div className="text-center space-y-1">
+              <p className="text-[10px] font-black text-text-m uppercase tracking-[0.3em]">
+                Q-Stocks Enterprise Web
+              </p>
+              <p className="text-[9px] font-bold text-text-m/50 uppercase">
+                Version 1.0.2 • Build 2026.06.25
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -62,46 +101,56 @@ const SettingsPage = () => {
   );
 };
 
-// --- Reusable Layout Components ---
+// --- Reusable Sub-Components ---
 
 const Section = ({ label, children }) => (
   <div className="space-y-3">
-    <p className="ml-4 text-[10px] font-black text-[color:var(--color-text-muted)] uppercase tracking-widest">
+    <p className="ml-4 text-[10px] font-black text-text-m uppercase tracking-[0.2em]">
       {label}
     </p>
-    <div className="bg-[color:var(--color-card-bg)] rounded-[2rem] border border-[color:var(--color-border)] overflow-hidden shadow-sm">
+    <div className="bg-card-bg rounded-[2.5rem] border border-border-v overflow-hidden shadow-sm transition-colors duration-300">
       {children}
     </div>
   </div>
 );
 
-const ToggleTile = ({ icon, label, value, onToggle }) => (
-  <div className="flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-[color:var(--color-border)] last:border-0">
-    <div className="flex items-center gap-4">
-      <div className="text-q-green">{icon}</div>
-      <span className="font-bold text-[color:var(--color-text-main)]">{label}</span>
+const ToggleTile = ({ icon, label, subLabel, value, onToggle }) => (
+  <div className="flex items-center justify-between p-6 hover:bg-app-bg/50 transition-colors border-b border-border-v last:border-0">
+    <div className="flex items-center gap-5">
+      <div className={`p-3 rounded-2xl ${value ? 'bg-q-green/20 text-q-green' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="font-bold text-text-h leading-tight">{label}</p>
+        <p className="text-xs text-text-m mt-0.5">{subLabel}</p>
+      </div>
     </div>
     <button 
       onClick={onToggle}
-      className={`w-12 h-6 rounded-full transition-all relative ${value ? 'bg-q-green' : 'bg-slate-300'}`}
+      className={`w-14 h-7 rounded-full transition-all relative shadow-inner ${value ? 'bg-q-green' : 'bg-slate-300 dark:bg-slate-700'}`}
     >
-      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${value ? 'left-7' : 'left-1'}`} />
+      <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${value ? 'left-8' : 'left-1'}`} />
     </button>
   </div>
 );
 
-const NavTile = ({ icon, label, onClick, isDestructive }) => (
+const NavTile = ({ icon, label, subLabel, onClick, isDestructive }) => (
   <button 
     onClick={onClick}
-    className="w-full flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-[color:var(--color-border)] last:border-0"
+    className="w-full flex items-center justify-between p-6 hover:bg-app-bg/50 transition-colors border-b border-border-v last:border-0 group"
   >
-    <div className="flex items-center gap-4">
-      <div className="text-slate-400">{icon}</div>
-      <span className={`font-bold ${isDestructive ? 'text-red-500' : 'text-[color:var(--color-text-main)]'}`}>
-        {label}
-      </span>
+    <div className="flex items-center gap-5">
+      <div className={`p-3 rounded-2xl ${isDestructive ? 'bg-red-500/10' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+        {icon}
+      </div>
+      <div className="text-left">
+        <p className={`font-bold leading-tight ${isDestructive ? 'text-red-500' : 'text-text-h'}`}>
+          {label}
+        </p>
+        <p className="text-xs text-text-m mt-0.5">{subLabel}</p>
+      </div>
     </div>
-    <ChevronRight size={18} className="text-slate-300" />
+    <ChevronRight size={18} className="text-text-m group-hover:translate-x-1 transition-transform" />
   </button>
 );
 

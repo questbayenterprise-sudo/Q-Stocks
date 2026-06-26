@@ -67,62 +67,76 @@ const AddProductPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-100 sticky top-0 z-30">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-            <ArrowLeft size={20} className="text-slate-600" />
-          </button>
-          <h1 className="text-xl font-black text-slate-800 tracking-tight">
-            {existingProduct ? 'Edit Product' : 'Add New Product'}
-          </h1>
+    // UNIFIED: bg-app-bg
+    <div className="min-h-screen bg-app-bg pb-20 transition-colors duration-300">
+      
+      {/* Header - UNIFIED: bg-card-bg, border-border-v */}
+      <div className="bg-card-bg border-b border-border-v sticky top-0 z-30 transition-colors duration-300">
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="p-2 bg-app-bg text-text-m hover:text-q-green rounded-full transition-all"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-black text-text-h tracking-tight">
+              {existingProduct ? 'Edit Product' : 'Add New Item'}
+            </h1>
+          </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto p-6">
         <form onSubmit={handleSubmit} className="space-y-8">
           
-          {/* Product Image Uploader */}
-          <div className="relative group w-48 h-48 mx-auto bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200 overflow-hidden flex items-center justify-center transition-all hover:border-q-green shadow-inner">
+          {/* Image Uploader - UNIFIED: bg-card-bg, border-border-v */}
+          <div className="relative group w-48 h-48 mx-auto bg-card-bg rounded-[2.5rem] border-2 border-dashed border-border-v overflow-hidden flex items-center justify-center transition-all hover:border-q-green shadow-sm">
             {imagePreview ? (
               <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
             ) : (
               <div className="text-center p-4">
-                <Camera className="text-slate-300 mx-auto mb-2" size={32} />
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-tighter">Product Photo</p>
+                <Camera className="text-text-m mx-auto mb-2" size={32} />
+                <p className="text-text-m text-[10px] font-black uppercase tracking-tighter">Product Photo</p>
               </div>
             )}
-            <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageChange} 
+              className="absolute inset-0 opacity-0 cursor-pointer" 
+            />
           </div>
 
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50 border border-white space-y-6">
-            {/* Name */}
+          {/* Form Card - UNIFIED: bg-card-bg, border-border-v */}
+          <div className="bg-card-bg rounded-[2.5rem] p-8 shadow-xl shadow-slate-900/5 border border-border-v space-y-6 transition-colors duration-300">
+            
+            {/* Name Input */}
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
+              <label className="text-[10px] font-black text-text-m uppercase tracking-[0.2em] ml-2">Product Name</label>
               <div className="relative">
-                <ShoppingBag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5" />
+                <ShoppingBag className="absolute left-4 top-1/2 -translate-y-1/2 text-text-m" size={18} />
                 <input 
                   type="text"
                   required
                   placeholder="e.g. Whole Broiler Chicken"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-q-green focus:bg-white transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 bg-app-bg border-2 border-border-v rounded-2xl outline-none focus:border-q-green text-text-h font-bold transition-all placeholder:text-text-m/30"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Category */}
+              {/* Category Select */}
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+                <label className="text-[10px] font-black text-text-m uppercase tracking-[0.2em] ml-2">Category</label>
                 <div className="relative">
-                  <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5" />
+                  <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-text-m" size={18} />
                   <select 
                     value={formData.category_id}
                     onChange={(e) => setFormData({...formData, category_id: e.target.value})}
-                    className="w-full pl-12 pr-10 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-q-green focus:bg-white transition-all font-medium appearance-none"
+                    className="w-full pl-12 pr-10 py-4 bg-app-bg border-2 border-border-v rounded-2xl outline-none focus:border-q-green text-text-h font-bold transition-all appearance-none"
                   >
                     <option value="1">Broiler Chicken</option>
                     <option value="2">Country Chicken</option>
@@ -132,15 +146,15 @@ const AddProductPage = () => {
                 </div>
               </div>
 
-              {/* UOM */}
+              {/* UOM Select */}
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Unit (UOM)</label>
+                <label className="text-[10px] font-black text-text-m uppercase tracking-[0.2em] ml-2">Unit (UOM)</label>
                 <div className="relative">
-                  <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5" />
+                  <Scale className="absolute left-4 top-1/2 -translate-y-1/2 text-text-m" size={18} />
                   <select 
                     value={formData.uom}
                     onChange={(e) => setFormData({...formData, uom: e.target.value})}
-                    className="w-full pl-12 pr-10 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-q-green focus:bg-white transition-all font-medium appearance-none"
+                    className="w-full pl-12 pr-10 py-4 bg-app-bg border-2 border-border-v rounded-2xl outline-none focus:border-q-green text-text-h font-bold transition-all appearance-none"
                   >
                     <option value="KG">Kilogram (KG)</option>
                     <option value="Piece">Piece (Qty)</option>
@@ -150,11 +164,11 @@ const AddProductPage = () => {
               </div>
             </div>
 
-            {/* Base Price */}
+            {/* Price Input */}
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Base Selling Price (₹)</label>
+              <label className="text-[10px] font-black text-text-m uppercase tracking-[0.2em] ml-2">Base Selling Price</label>
               <div className="relative">
-                <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5" />
+                <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-q-green" size={20} />
                 <input 
                   type="number"
                   required
@@ -162,18 +176,25 @@ const AddProductPage = () => {
                   placeholder="0.00"
                   value={formData.base_price}
                   onChange={(e) => setFormData({...formData, base_price: e.target.value})}
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-q-green focus:bg-white transition-all font-black text-xl text-slate-900"
+                  className="w-full pl-12 pr-4 py-5 bg-app-bg border-2 border-border-v rounded-2xl outline-none focus:border-q-green text-q-green font-black text-3xl transition-all placeholder:text-q-green/20"
                 />
               </div>
             </div>
           </div>
 
+          {/* Action Button */}
           <button 
             type="submit"
             disabled={loading || success}
-            className="w-full bg-q-green hover:bg-q-green-dark text-white font-black py-5 rounded-3xl shadow-xl shadow-green-200 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-70"
+            className="w-full bg-q-green hover:bg-q-green-dark text-white font-black py-5 rounded-3xl shadow-xl shadow-q-green/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98] disabled:bg-slate-300 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="animate-spin" size={24} /> : success ? <CheckCircle2 size={24} /> : 'SAVE TO CATALOG'}
+            {loading ? (
+              <Loader2 className="animate-spin w-6 h-6" />
+            ) : success ? (
+              <CheckCircle2 size={24} />
+            ) : (
+              'SAVE TO CATALOG'
+            )}
           </button>
 
         </form>

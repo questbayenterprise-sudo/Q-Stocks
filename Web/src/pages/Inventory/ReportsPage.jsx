@@ -1,16 +1,13 @@
-
-import autoTable from 'jspdf-autotable'; // Import the function instead of the side-effect
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, TrendingUp, Wallet, AlertCircle, 
-  Search, Calendar, FileSpreadsheet, FileText, 
+  Search, FileSpreadsheet, FileText, 
   ChevronRight, Loader2 
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf'; // Import jsPDF
-import 'jspdf-autotable'; // Import AutoTable plugin
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import api from '../../api/axiosInstance';
 
 const ReportsPage = () => {
@@ -43,7 +40,6 @@ const ReportsPage = () => {
     }
   };
 
-  // --- EXCEL EXPORT LOGIC ---
   const exportToExcel = () => {
     const dataToExport = customerSummary.map(c => ({
       "Customer Name": c.name,
@@ -57,22 +53,16 @@ const ReportsPage = () => {
     XLSX.writeFile(workbook, `Shop_Report_${new Date().toLocaleDateString()}.xlsx`);
   };
 
-  // --- NEW: PDF EXPORT LOGIC ---
   const exportToPdf = () => {
     const doc = new jsPDF();
-    
-    // Add Title
     doc.setFontSize(18);
     doc.text("Q-Stocks Business Report", 14, 22);
-    
-    // Add Subtitle/Date
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
     doc.text(`Total Sales: Rs. ${summary.total_revenue}`, 14, 38);
     doc.text(`Pending Dues: Rs. ${summary.occupancy}`, 14, 46);
 
-    // Create Table Data
     const tableColumn = ["Customer Name", "Phone", "Balance (Rs.)", "Status"];
     const tableRows = customerSummary.map(c => [
       c.name,
@@ -81,13 +71,12 @@ const ReportsPage = () => {
       c.current_balance > 0 ? "Owed" : "Settled"
     ]);
 
-    // FIXED: Use autoTable as a function call directly
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 55,
       theme: 'grid',
-      headStyles: { fillColor: [0, 163, 108] }, // Use fillColor instead of fillStyle
+      headStyles: { fillColor: [0, 163, 108] },
       styles: { fontSize: 9 }
     });
 
@@ -99,33 +88,33 @@ const ReportsPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-6 lg:p-10">
+    // UNIFIED: bg-app-bg
+    <div className="min-h-screen bg-app-bg p-4 md:p-8 lg:p-10 transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
         
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <h1 className="text-3xl font-black text-text-h tracking-tight flex items-center gap-3">
               <BarChart3 className="text-q-green" size={32} /> Business Reports
             </h1>
-            <p className="text-slate-500 font-medium">Financial insights and customer dues tracking.</p>
+            <p className="text-text-m font-medium">Financial insights and customer dues tracking.</p>
           </div>
 
           <div className="flex items-center gap-3">
             <button 
               onClick={exportToExcel}
-              className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-3 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+              className="flex items-center gap-2 bg-card-bg border border-border-v px-5 py-3 rounded-2xl font-bold text-text-h hover:bg-app-bg transition-all shadow-sm active:scale-95"
             >
               <FileSpreadsheet size={18} className="text-green-600" />
-              <span>EXCEL</span>
+              <span className="text-xs uppercase tracking-widest">Excel</span>
             </button>
-            
-            {/* FIXED: Added onClick={exportToPdf} */}
             <button 
               onClick={exportToPdf}
-              className="flex items-center gap-2 bg-white border border-slate-200 px-5 py-3 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+              className="flex items-center gap-2 bg-card-bg border border-border-v px-5 py-3 rounded-2xl font-bold text-text-h hover:bg-app-bg transition-all shadow-sm active:scale-95"
             >
               <FileText size={18} className="text-red-500" />
-              <span>PDF</span>
+              <span className="text-xs uppercase tracking-widest">PDF</span>
             </button>
           </div>
         </div>
@@ -137,18 +126,19 @@ const ReportsPage = () => {
           <StatCard label="Pending Dues" value={`₹${summary.occupancy}`} icon={<AlertCircle />} color="bg-red-500" />
         </div>
 
-        {/* Customer Breakdown Section */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Customer Breakdown</h3>
+        {/* Customer Breakdown Section - UNIFIED: bg-card-bg, border-border-v */}
+        <div className="bg-card-bg rounded-[2.5rem] shadow-sm border border-border-v overflow-hidden transition-colors duration-300">
+          <div className="p-8 border-b border-border-v flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h3 className="text-lg font-black text-text-h uppercase tracking-tight">Customer Breakdown</h3>
             <div className="relative w-full md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 w-4 h-4" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-m w-4 h-4" />
               <input 
                 type="text"
                 placeholder="Search customer..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl outline-none focus:ring-2 focus:ring-q-green/20 font-medium text-sm"
+                // UNIFIED: bg-app-bg for input contrast
+                className="w-full pl-10 pr-4 py-3 bg-app-bg border-none rounded-xl outline-none focus:ring-2 focus:ring-q-green/20 font-medium text-sm text-text-h"
               />
             </div>
           </div>
@@ -158,7 +148,8 @@ const ReportsPage = () => {
               <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-q-green" /></div>
             ) : (
               <table className="w-full text-left">
-                <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                {/* UNIFIED: bg-app-bg for table header */}
+                <thead className="bg-app-bg text-[10px] font-black text-text-m uppercase tracking-[0.2em]">
                   <tr>
                     <th className="px-8 py-4">Customer Name</th>
                     <th className="px-8 py-4">Phone</th>
@@ -166,20 +157,20 @@ const ReportsPage = () => {
                     <th className="px-8 py-4"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-border-v">
                   {filteredCustomers.map(customer => (
                     <tr 
                       key={customer.id} 
                       onClick={() => navigate(`/customers/${customer.id}`)}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                      className="hover:bg-app-bg/50 transition-colors cursor-pointer group"
                     >
-                      <td className="px-8 py-5 font-bold text-slate-700">{customer.name}</td>
-                      <td className="px-8 py-5 text-slate-400 text-sm">{customer.phone || '---'}</td>
+                      <td className="px-8 py-5 font-bold text-text-h">{customer.name}</td>
+                      <td className="px-8 py-5 text-text-m text-sm">{customer.phone || '---'}</td>
                       <td className={`px-8 py-5 text-right font-black ${customer.current_balance > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                        ₹{customer.current_balance}
+                        ₹{customer.current_balance.toLocaleString()}
                       </td>
                       <td className="px-8 py-5 text-right">
-                        <ChevronRight size={18} className="ml-auto text-slate-200 group-hover:text-q-green transition-colors" />
+                        <ChevronRight size={18} className="ml-auto text-border-v group-hover:text-q-green transition-colors" />
                       </td>
                     </tr>
                   ))}
@@ -195,13 +186,14 @@ const ReportsPage = () => {
 };
 
 const StatCard = ({ label, value, icon, color }) => (
-  <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-6">
-    <div className={`w-14 h-14 rounded-2xl ${color} text-white flex items-center justify-center shadow-lg shadow-slate-100`}>
+  // UNIFIED: bg-card-bg, border-border-v, text-text-h
+  <div className="bg-card-bg p-8 rounded-[2rem] shadow-sm border border-border-v flex items-center gap-6 transition-colors duration-300">
+    <div className={`w-14 h-14 rounded-2xl ${color} text-white flex items-center justify-center shadow-lg shadow-slate-900/5`}>
       {React.cloneElement(icon, { size: 28 })}
     </div>
     <div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-      <p className="text-2xl font-black text-slate-800 mt-1">{value}</p>
+      <p className="text-[10px] font-black text-text-m uppercase tracking-widest leading-none mb-1">{label}</p>
+      <p className="text-2xl font-black text-text-h">{value}</p>
     </div>
   </div>
 );

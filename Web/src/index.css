@@ -1,11 +1,35 @@
 @import "tailwindcss";
 
 @theme {
+  /* Brand Colors */
   --color-q-green: #00A36C;
-  --color-q-green-dark: #008F5D;
+
+  /* THEME MAPPING - Ensure these names match your JSX exactly */
+  --color-app-bg: var(--bg-app);
+  --color-card-bg: var(--bg-card);
+  --color-text-h: var(--text-h);
+  --color-text-m: var(--text-m);
+  --color-border-v: var(--border-v); /* This maps 'border-border-v' class */
+}
+
+:root {
+  --bg-app: #F8F9FA;
+  --bg-card: #ffffff;
+  --text-h: #0f172a;
+  --text-m: #64748b;
+  --border-v: #e2e8f0; /* Soft grey, NOT black */
+}
+
+.dark {
+  --bg-app: #020617;
+  --bg-card: #0f172a;
+  --text-h: #f8fafc;
+  --text-m: #94a3b8;
+  --border-v: #1e293b; /* Deep slate, NOT black */
 }
 
 body {
-  @apply bg-slate-50 antialiased;
-  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-h);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
