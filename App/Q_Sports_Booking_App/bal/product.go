@@ -155,10 +155,10 @@ func DeleteProduct(c *gin.Context) {
 
 	if err != nil {
 		// THIS LOG WILL SHOW YOU THE REAL ERROR IN THE TERMINAL
-		log.Printf("❌ DeleteProduct SQL Error: %v", err) 
-		
+		log.Printf("❌ DeleteProduct SQL Error: %v", err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false, 
+			"success": false,
 			"message": "Database error: " + err.Error(),
 		})
 		return

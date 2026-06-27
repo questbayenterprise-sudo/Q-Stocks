@@ -50,7 +50,7 @@ func SendOTP(Otp_data Otp_struct) error {
 </head>
 <body>
   <div class="container">
-    <div class="logo">Q Sports</div>
+    <div class="logo">Q Stocks</div>
     <h2>OTP Verification</h2>
     <p>Use the following One-Time Password to continue:</p>
     <div class="otp-box">%s</div>

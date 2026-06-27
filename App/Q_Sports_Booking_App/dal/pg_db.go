@@ -31,11 +31,11 @@ type Mail_Auth struct {
 
 // Config is the top-level structure
 type Config struct {
-	Database               DBConfig  `json:"database"`
-	MailAuth               Mail_Auth `json:"mailauth"`
-	FcmServerKey           string    `json:"fcm_server_key"`
-	FcmServiceAccountPath  string    `json:"fcm_service_account_path"`
-	FcmProjectID           string    `json:"fcm_project_id"`
+	Database              DBConfig  `json:"database"`
+	MailAuth              Mail_Auth `json:"mailauth"`
+	FcmServerKey          string    `json:"fcm_server_key"`
+	FcmServiceAccountPath string    `json:"fcm_service_account_path"`
+	FcmProjectID          string    `json:"fcm_project_id"`
 }
 
 const (

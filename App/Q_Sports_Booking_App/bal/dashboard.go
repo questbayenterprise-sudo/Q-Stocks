@@ -1,10 +1,10 @@
 package bal
 
 import (
-	"log"
-	"net/http"
 	"github.com/gin-gonic/gin"
 	dal "github.com/qsports/q-stocks-app/dal"
+	"log"
+	"net/http"
 )
 
 // Mapping to your React/Flutter expectations

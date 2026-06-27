@@ -291,7 +291,7 @@ func Verify_OTP(c *gin.Context) {
 		ORDER BY r.role_name ASC
 		LIMIT 1`
 
-	var user SignInResponse 
+	var user SignInResponse
 	err = dal.DB.QueryRow(ctx, userQuery, userID).Scan(
 		&user.ID,
 		&user.Username,
@@ -313,6 +313,7 @@ func Verify_OTP(c *gin.Context) {
 		"data":    user,
 	})
 }
+
 // ============================================================
 // 3. CREATE / UPDATE USER (HYBRID)
 // ============================================================
