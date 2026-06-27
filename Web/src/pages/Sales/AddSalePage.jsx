@@ -25,7 +25,7 @@ const AddSalePage = () => {
     Promise.all([
       getProducts(),
       getCustomers(),
-      fetchShops(user.id, user.userType_id)
+      fetchShops(user.id, user.UserType)
     ]).then(([p, c, s]) => {
       setProducts(p);
       setCustomers(c);

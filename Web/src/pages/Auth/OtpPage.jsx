@@ -19,6 +19,7 @@ const OtpPage = () => {
     setLoading(true);
 
     try {
+      debugger
       const result = await verifyOtp(email, otp);
       if (result.success) {
         localStorage.setItem('user', JSON.stringify(result.data));

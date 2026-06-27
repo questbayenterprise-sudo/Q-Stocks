@@ -11,7 +11,7 @@
   "mailauth":{
     "from_mailID":"questbayenterprise@gmail.com",
     "app_name":"QSportsMailAuth",
-    "app_acccode" : "yieh kewl zkbz tfjc"
+    "app_acccode" : "dksx fvwo arfh xvrr"
   },
   "fcm_service_account_path": "./firebase-service-account.json",
   "fcm_project_id": "q-sports-fcm"

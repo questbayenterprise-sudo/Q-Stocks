@@ -23,3 +23,8 @@ export const getPendingPayments = async () => {
   const res = await api.post('/GetPendingPayments');
   return res.data.data || [];
 };
+// Add deleteStock if not already there
+export const deleteStock = async (id) => {
+  const res = await api.post('/DeleteStock', { id: id.toString() });
+  return res.data;
+};

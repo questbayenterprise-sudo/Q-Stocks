@@ -1,18 +1,16 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ReceiptText, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; 
+import { ReceiptText, ChevronRight } from 'lucide-react'; // Added ChevronRight here
 
 const RecentSales = ({ sales }) => {
   const navigate = useNavigate();
 
   return (
-    // UNIFIED: bg-card-bg, border-border-main, text-text-main
-    <div className="bg-card-bg p-8 rounded-[2.5rem] border border-border-main shadow-sm h-full flex flex-col transition-colors duration-300">
+    // FIXED: Changed border-border-main to border-border-v
+    <div className="bg-card-bg p-8 rounded-[2.5rem] border border-border-v shadow-sm h-full flex flex-col transition-colors duration-300">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h3 className="text-lg font-black text-text-main uppercase tracking-tight">Recent Sales</h3>
-          {/* UNIFIED: text-text-muted */}
-          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Latest Transactions</p>
+          <h3 className="text-lg font-black text-text-h uppercase tracking-tight">Recent Sales</h3>
+          <p className="text-[10px] font-bold text-text-m uppercase tracking-widest">Latest Transactions</p>
         </div>
         <button 
           onClick={() => navigate('/sales')} 
@@ -27,21 +25,20 @@ const RecentSales = ({ sales }) => {
           sales.map((sale) => (
             <div 
               key={sale.id} 
-              // UNIFIED: bg-app-bg (the lighter grey/dark blue background)
-              className="flex items-center gap-4 rounded-2xl bg-app-bg p-4 hover:brightness-95 dark:hover:brightness-110 transition-all cursor-pointer group border border-transparent hover:border-border-main"
+              // FIXED: Changed hover:border-border-main to hover:border-border-v
+              className="flex items-center gap-4 rounded-2xl bg-app-bg p-4 hover:brightness-95 dark:hover:brightness-110 transition-all cursor-pointer group border border-transparent hover:border-border-v"
             >
-              {/* UNIFIED: bg-card-bg for the icon circle */}
               <div className="w-10 h-10 rounded-full bg-card-bg flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                <ReceiptText size={18} className="text-text-muted group-hover:text-q-green" />
+                <ReceiptText size={18} className="text-text-m group-hover:text-q-green" />
               </div>
               
               <div className="flex-1">
-                <p className="text-sm font-bold text-text-main">Order #{sale.booking_ref}</p>
-                <p className="text-[11px] text-text-muted font-medium">{sale.user_name}</p>
+                <p className="text-sm font-bold text-text-h">Order #{sale.booking_ref}</p>
+                <p className="text-[11px] text-text-m font-medium">{sale.user_name}</p>
               </div>
               
               <div className="text-right">
-                <p className="font-black text-text-main text-sm">₹{sale.price}</p>
+                <p className="font-black text-text-h text-sm">₹{sale.price}</p>
                 <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-q-green/10 text-q-green uppercase tracking-tighter">
                   {sale.status}
                 </span>
@@ -50,9 +47,9 @@ const RecentSales = ({ sales }) => {
           ))
         ) : (
           <div className="flex flex-col items-center justify-center h-full py-10">
-            {/* UNIFIED: text-border-main for the empty state icon */}
-            <ReceiptText size={48} className="text-border-main mb-2" />
-            <p className="text-sm font-bold text-text-muted italic">No sales found today</p>
+            {/* FIXED: Changed text-border-main to text-border-v */}
+            <ReceiptText size={48} className="text-border-v mb-2" />
+            <p className="text-sm font-bold text-text-m italic">No sales found today</p>
           </div>
         )}
       </div>

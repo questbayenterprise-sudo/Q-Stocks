@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	dal "github.com/qsports/q-stocks-app/dal"
 )
+
+// --- Internal Helpers ---
 
 type User struct {
 	ID       int    `json:"id"`
@@ -30,28 +33,6 @@ type VerifyEmailResponse struct {
 // var store = sessions.NewCookieStore([]byte("secret-key"))
 
 // var loginTmpl = template.Must(template.ParseFiles("login.html"))
-
-func Logout(c *gin.Context) {
-	// session, _ := store.Get(r, "auth-session")
-	// session.Options.MaxAge = -1 // delete session
-	// session.Save(r, w)
-	userid := c.PostForm("userid")
-	query1 := "UPDATE users set updated_at= now() where id in (&1)"
-
-	rows, err := dal.ExecNonQuery(c.Request.Context(), query1, userid)
-
-	if err != nil && rows == 0 {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "Database error"})
-		return
-		//return err
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": "Logout Successfuly",
-		})
-		return
-	}
-}
 
 func VerifyEmail(c *gin.Context) {
 
@@ -82,316 +63,6 @@ func VerifyEmail(c *gin.Context) {
 	}
 	// w.Header().Set("Content-Type", "application/json")
 	// json.NewEncoder(w).Encode(response)
-}
-
-func Create_Cususer(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	// 1. Get Form Fields
-	// Note: You can add validation here (e.g., check if email is empty)
-	username := c.PostForm("username")
-	email := c.PostForm("email")
-	phoneno := c.PostForm("phoneno")
-	acccode := c.PostForm("acccode")
-	usertype := c.PostForm("usertype")
-	address := c.PostForm("address")
-	city := c.PostForm("city")
-	state_territory := c.PostForm("state_territory")
-
-	// Basic Validation
-	if usertype == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "User type is required"})
-		return
-	}
-
-	if email == "" || username == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Username and Email are required"})
-		return
-	}
-
-	// ────────────────────────────────────────────────
-	// START TRANSACTION
-	// ────────────────────────────────────────────────
-	tx, err := dal.DB.Begin(ctx)
-	if err != nil {
-		log.Printf("Transaction Start Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "DB Transaction Error"})
-		return
-	}
-
-	// Rollback automatically if function returns before Commit
-	defer tx.Rollback(ctx)
-
-	// 2. Check if Email already exists
-	// Since the DB schema has UNIQUE constraint, we check this first for a cleaner error message
-	var count int
-	checkQuery := `SELECT COUNT(*) FROM users WHERE email = $1`
-	err = tx.QueryRow(ctx, checkQuery, email).Scan(&count)
-	if err != nil {
-		log.Printf("Email check error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Error checking existing user"})
-		return
-	}
-
-	if count > 0 {
-		c.JSON(http.StatusConflict, gin.H{
-			"success": false,
-			"message": "MailID already exists",
-		})
-		return
-	}
-
-	// 3. Insert into users table
-	uQuery := `
-	INSERT INTO users 
-	(username, email, phoneno, acccode, is_active, address, city, state_territory) 
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-	RETURNING id
-	`
-
-	var lastID int
-
-	err = tx.QueryRow(ctx, uQuery,
-		username,
-		email,
-		phoneno,
-		acccode,
-		true,
-		address,
-		city,
-		state_territory,
-	).Scan(&lastID)
-
-	if err != nil {
-		log.Printf("User Insert Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Failed to create account",
-		})
-		return
-	}
-
-	//
-	// 4. Get role_id for default role = 'user'
-	//
-	var roleID int
-	roleQuery := `SELECT id FROM roles WHERE role_name = 'user' LIMIT 1`
-
-	err = tx.QueryRow(ctx, roleQuery).Scan(&roleID)
-	if err != nil {
-		log.Printf("Role Fetch Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Default role not configured",
-		})
-		return
-	}
-
-	//
-	// 5. Insert into user_roles mapping table
-	//
-	mapQuery := `
-	INSERT INTO user_roles (user_id, role_id)
-	VALUES ($1, $2)
-	`
-
-	_, err = tx.Exec(ctx, mapQuery, lastID, roleID)
-	if err != nil {
-		log.Printf("User Role Insert Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Failed to assign user role",
-		})
-		return
-	}
-	// 4. COMMIT TRANSACTION
-	if err := tx.Commit(ctx); err != nil {
-		log.Printf("Commit Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Final save failed"})
-		return
-	}
-
-	// 5. Success Response
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"status":  http.StatusOK,
-		"message": "Account Created Successfully",
-		"data": gin.H{
-			"id": lastID,
-		},
-	})
-}
-
-func Update_Cususer(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	// 1. Get Fields (Including ID)
-	id := c.PostForm("id")
-	username := c.PostForm("username")
-	email := c.PostForm("email")
-	phoneno := c.PostForm("phoneno")
-	acccode := c.PostForm("acccode")
-	city := c.PostForm("city")
-	bio := c.PostForm("bio")
-
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "User ID is required"})
-		return
-	}
-	var imagePath string
-	file, err := c.FormFile("image") // Ensure Flutter sends key as "image"
-
-	if err == nil {
-		// New image uploaded
-		uploadDir := "uploads/users"
-
-		// Check if directory exists
-		if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-			// If it doesn't exist, try to create it
-			err := os.MkdirAll(uploadDir, 0755) // 0755 is standard for public-readable folders
-			if err != nil {
-				log.Printf("Directory creation failed: %v", err)
-				c.JSON(500, gin.H{"success": false, "message": "Could not create upload directory"})
-				return
-			}
-		}
-		// Use ID as filename + original extension
-		ext := filepath.Ext(file.Filename)
-		filename := fmt.Sprintf("%s%s", id, ext)
-		imagePath = filepath.Join(uploadDir, filename)
-
-		// Save the file
-		if err := c.SaveUploadedFile(file, imagePath); err != nil {
-			log.Printf("File Save Error: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to save image"})
-			return
-		}
-	}
-	// ────────────────────────────────────────────────
-	// START TRANSACTION
-	// ────────────────────────────────────────────────
-	tx, err := dal.DB.Begin(ctx)
-	if err != nil {
-		log.Printf("Transaction Start Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "DB Transaction Error"})
-		return
-	}
-	defer tx.Rollback(ctx)
-
-	// 2. Check for Email Conflict
-	// (Ensure the new email isn't already taken by someone ELSE)
-	var count int
-	checkQuery := `SELECT COUNT(*) FROM users WHERE email = $1 AND id != $2`
-	err = tx.QueryRow(ctx, checkQuery, email, id).Scan(&count)
-	if err != nil {
-		log.Printf("Email check error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Error validating email"})
-		return
-	}
-	if count > 0 {
-		c.JSON(http.StatusConflict, gin.H{"success": false, "message": "Email already in use by another account"})
-		return
-	}
-
-	// 3. Update User
-	var result interface{ RowsAffected() int64 }
-	if imagePath != "" {
-		uQuery := `UPDATE users
-				   SET username = $1, email = $2, phoneno = $3, acccode = $4, city = $5, bio = $6, image_url = $7, updated_at = CURRENT_TIMESTAMP
-				   WHERE id = $8`
-		result, err = tx.Exec(ctx, uQuery, username, email, phoneno, acccode, city, bio, imagePath, id)
-	} else {
-		uQuery := `UPDATE users
-				   SET username = $1, email = $2, phoneno = $3, acccode = $4, city = $5, bio = $6, updated_at = CURRENT_TIMESTAMP
-				   WHERE id = $7`
-		result, err = tx.Exec(ctx, uQuery, username, email, phoneno, acccode, city, bio, id)
-	}
-	if err != nil {
-		log.Printf("User Update Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to update account"})
-		return
-	}
-
-	// Check if any row was actually updated
-	rowsAffected := result.RowsAffected()
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "User not found"})
-		return
-	}
-
-	// 4. COMMIT TRANSACTION
-	if err := tx.Commit(ctx); err != nil {
-		log.Printf("Commit Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Final save failed"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Account Updated Successfully",
-	})
-}
-
-func Delete_Cususer(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	// 1. Get ID from params, form, or JSON body
-	id := c.Param("id")
-	if id == "" {
-		id = c.PostForm("id")
-	}
-	if id == "" {
-		var body struct {
-			ID string `json:"id"`
-		}
-		if err := c.ShouldBindJSON(&body); err == nil {
-			id = body.ID
-		}
-	}
-
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "User ID is required"})
-		return
-	}
-
-	// ────────────────────────────────────────────────
-	// START TRANSACTION
-	// ────────────────────────────────────────────────
-	tx, err := dal.DB.Begin(ctx)
-	if err != nil {
-		log.Printf("Transaction Start Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "DB Transaction Error"})
-		return
-	}
-	defer tx.Rollback(ctx)
-
-	// 2. Delete User
-	dQuery := `DELETE FROM users WHERE id = $1`
-
-	result, err := tx.Exec(ctx, dQuery, id)
-	if err != nil {
-		log.Printf("User Delete Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to delete account"})
-		return
-	}
-
-	// Check if the user existed
-	if result.RowsAffected() == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "User not found"})
-		return
-	}
-
-	// 3. COMMIT TRANSACTION
-	if err := tx.Commit(ctx); err != nil {
-		log.Printf("Commit Error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Deletion failed"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "User deleted successfully",
-	})
 }
 
 type UserProfileRequest struct {
@@ -489,282 +160,271 @@ func SignIn(c *gin.Context) {
 	var req SignInRequest
 	ctx := c.Request.Context()
 
-	// 1. Bind JSON request
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Email is required"})
 		return
 	}
 
-	// 2. Query the database to find the user and check their retry limits
-	// We added retry columns to the selection
+	// 1. Fetch User & Security Limits
 	query := `
-	SELECT 
-		usr.id, 
-		usr.username, 
-		COALESCE(usr_rl.role_id, 0) as UserType, 
-		COALESCE(rl.role_name, 'user') as UserType_id, 
-		usr.email, 
-		COALESCE(usr.phoneno, '') as phoneno,
-		COALESCE(usr.address, '') as address, 
-		COALESCE(usr.city, '') as city, 
-		COALESCE(usr.image_url, '') as image_url,
-		usr.retry_cnt_lmt,
-		usr.retrycnt_updated_on
-	FROM users usr 
-	LEFT JOIN user_roles usr_rl ON usr_rl.user_id = usr.id
-	LEFT JOIN roles rl ON rl.id = usr_rl.role_id
-	WHERE usr.is_active = true AND usr.email = $1
-	`
+    SELECT 
+        u.id, u.username, COALESCE(r.role_name, 'user'), u.email, 
+        COALESCE(u.phoneno, ''), COALESCE(u.address, ''), 
+        COALESCE(u.city, ''), COALESCE(u.image_url, ''),
+        u.retry_cnt_lmt, u.retrycnt_updated_on
+    FROM users u
+    LEFT JOIN user_roles ur ON ur.user_id = u.id
+    LEFT JOIN roles r ON r.id = ur.role_id
+    WHERE LOWER(u.email) = LOWER($1) AND u.is_active = true
+    ORDER BY r.role_name ASC
+    LIMIT 1`
 
 	var user SignInResponse
-	var retry_cnt_lmt int
-	var retrycnt_updated_on sql.NullTime
+	var retryLmt int
+	var retryTime sql.NullTime
 
-	err := dal.DB.QueryRow(ctx, query, req.Email).Scan(
-		&user.ID,
-		&user.Username,
-		&user.UserType,
-		&user.UserType_id,
-		&user.Email,
-		&user.PhoneNo,
-		&user.Address,
-		&user.City,
-		&user.ImageURL,
-		&retry_cnt_lmt,
-		&retrycnt_updated_on,
+	err := dal.DB.QueryRow(ctx, query, strings.ToLower(req.Email)).Scan(
+		&user.ID, &user.Username, &user.UserType, &user.Email,
+		&user.PhoneNo, &user.Address, &user.City, &user.ImageURL,
+		&retryLmt, &retryTime,
 	)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": "User not found or account inactive",
-		})
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "User not found or inactive"})
 		return
 	}
 
-	// 3. Check if OTP verification is enabled in general settings
-	var enableVerifyOtp bool
-	_ = dal.DB.QueryRow(ctx, "SELECT COALESCE(enable_verify_otp, true) FROM tbl_general_settings LIMIT 1").Scan(&enableVerifyOtp)
+	// 2. Check Global Settings
+	var enableOtp bool
+	_ = dal.DB.QueryRow(ctx, "SELECT COALESCE(enable_otp, true) FROM tbl_general_settings LIMIT 1").Scan(&enableOtp)
 
-	if !enableVerifyOtp {
-		// PATH A: OTP is disabled — Return user data directly (Auto-Login)
-		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"otp_skipped": true,
-			"message":     "Login successful (OTP skipped)",
-			"data":        user,
-		})
+	if !enableOtp {
+		// PATH A: OTP Disabled -> Success
+		c.JSON(http.StatusOK, gin.H{"success": true, "otp_skipped": true, "data": user})
 		return
 	}
 
-	// PATH B: OTP is enabled — Generate and Send OTP
-
-	// Handle retry timestamp logic
-	var lastRetryTime time.Time
-	if retrycnt_updated_on.Valid {
-		lastRetryTime = retrycnt_updated_on.Time
-	} else {
-		lastRetryTime = time.Now().Add(-10 * time.Minute)
-	}
-
+	// 3. Handle OTP Generation & Retries
 	now := time.Now()
-	threshold := lastRetryTime.Add(5 * time.Minute)
-	remaining := threshold.Sub(now)
-
-	// Case 1: User has remaining retries
-	if retry_cnt_lmt > 0 {
-		otpCode := GenerateOTP()
-
-		// Update DB: Reduce retry count and set updated time
-		updateQuery := `UPDATE users SET retry_cnt_lmt = retry_cnt_lmt - 1, retrycnt_updated_on = now() WHERE email = $1`
-		_, err = dal.ExecNonQuery(ctx, updateQuery, user.Email)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to update security limits"})
-			return
-		}
-
-		// Log the OTP
-		insertLog := `INSERT INTO otp_log (userid, emailid, phoneno, otp, expires_at) VALUES ($1, $2, $3, $4, $5)`
-		expiresAt := now.Add(7 * time.Minute)
-		_, err = dal.DB.Exec(ctx, insertLog, user.ID, user.Email, user.PhoneNo, otpCode, expiresAt)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to generate security code"})
-			return
-		}
-
-		// Send the actual Email/SMS
-		otpData := Otp_struct{
-			Email:    user.Email,
-			Phone_no: user.PhoneNo,
-			OTP:      otpCode,
-		}
-		err = SendOTP(otpData)
-		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "message": "User identified, but failed to send email"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"otp_skipped": false,
-			"message":     "OTP Sent successfully to your email",
-		})
+	if retryLmt <= 0 && retryTime.Valid && now.Sub(retryTime.Time) < 5*time.Minute {
+		c.JSON(http.StatusTooManyRequests, gin.H{"success": false, "message": "Too many attempts. Please wait 5 minutes."})
 		return
 	}
 
-	// Case 2: Retry limit reached
-	if retry_cnt_lmt == 0 {
-		if now.After(threshold) {
-			// Reset retries if enough time has passed
-			resetQuery := `UPDATE users SET retry_cnt_lmt = (SELECT retry_count_limit FROM tbl_general_settings LIMIT 1), retrycnt_updated_on = now() WHERE email = $1`
-			_, _ = dal.ExecNonQuery(ctx, resetQuery, user.Email)
+	otpCode := GenerateOTP()
+	expiresAt := now.Add(10 * time.Minute)
 
-			c.JSON(http.StatusLocked, gin.H{
-				"success": false,
-				"message": "Retry limit was reached. It has now been reset. Please try signing in again.",
-			})
-			return
-		}
+	// Log OTP and Update Retry Counter
+	tx, _ := dal.DB.Begin(ctx)
+	defer tx.Rollback(ctx)
 
-		c.JSON(http.StatusTooManyRequests, gin.H{
-			"success": false,
-			"message": fmt.Sprintf("Too many attempts. Please try again after %v minutes", int(remaining.Minutes())+1),
-		})
-		return
-	}
-}
-func Verify_OTP(c *gin.Context) {
-	var Otp_data Otp_struct
-	ctx := c.Request.Context()
+	tx.Exec(ctx, "UPDATE users SET retry_cnt_lmt = retry_cnt_lmt - 1, retrycnt_updated_on = NOW() WHERE id = $1", user.ID)
+	tx.Exec(ctx, "INSERT INTO otp_log (userid, emailid, otp, expires_at) VALUES ($1, $2, $3, $4)", user.ID, user.Email, otpCode, expiresAt)
 
-	// 1. Bind JSON
-	if err := c.ShouldBindJSON(&Otp_data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Email and OTP are required",
-		})
-		return
+	tx.Commit(ctx)
+	otpData := Otp_struct{
+		Email:    user.Email,
+		Phone_no: user.PhoneNo,
+		OTP:      otpCode,
 	}
 
-	// 2. Verify OTP
-	result := Verify_OTP_auth(ctx, Otp_data)
-	if result != "true" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid or expired OTP",
-		})
-		return
-	}
-
-	// 3. Reset retry count to general settings limit after successful OTP
-	resetQuery := `
-		UPDATE users
-		SET retry_cnt_lmt = COALESCE(
-			(SELECT retry_count_limit FROM tbl_general_settings LIMIT 1), 5
-		),
-		retrycnt_updated_on = NOW()
-		WHERE email = $1
-	`
-	_, _ = dal.ExecNonQuery(ctx, resetQuery, Otp_data.Email)
-
-	// 4. Fetch user details
-	var (
-		id       int64
-		username string
-		usertype string
-	)
-
-	query := `
-	SELECT
-	u.id,
-	u.username,
-	r.role_name AS usertype
-	FROM users u
-	LEFT JOIN user_roles ur ON ur.user_id = u.id
-	LEFT JOIN roles r ON r.id = ur.role_id
-	WHERE u.email = $1
-	LIMIT 1;
-	`
-	err := dal.DB.QueryRow(ctx, query, Otp_data.Email).
-		Scan(&id, &username, &usertype)
-
+	err = SendOTP(otpData) // Call your mail function
 	if err != nil {
+		// THIS LOG IS CRITICAL - It will tell you why the mail failed in the terminal
+		log.Printf("❌ MAIL ERROR for %s: %v", user.Email, err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"message": "User not found after OTP verification",
+			"message": "User identified, but failed to send email. Check SMTP settings.",
 		})
 		return
 	}
+	// In production: SendEmail(user.Email, otpCode)
+	fmt.Printf("DEBUG: OTP for %s is %s\n", user.Email, otpCode)
 
-	// 5. Return user data
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "OTP verified successfully",
-		"data": gin.H{
-			"id":       id,
-			"username": username,
-			"usertype": usertype,
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"success": true, "otp_skipped": false, "message": "OTP sent to email"})
 }
 
-// ────────────────────────────────────────────────
-// ADMIN: Get All Users
-// ────────────────────────────────────────────────
-
-func GetAllUsers(c *gin.Context) {
+// ============================================================
+// 2. VERIFY OTP
+// ============================================================
+func Verify_OTP(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required"`
+		OTP   string `json:"otp" binding:"required"`
+	}
 	ctx := c.Request.Context()
 
-	query := `
-		SELECT
-			u.id,
-			u.username,
-			u.email,
-			COALESCE(u.phoneno, '') as phoneno,
-			COALESCE(r.role_name, 'user') as role,
-			u.is_active,
-			COALESCE(u.image_url, '') as image_url,
-			COALESCE(u.city, '') as city,
-			TO_CHAR(u.created_at, 'YYYY-MM-DD') as created_at
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "Email and OTP are required"})
+		return
+	}
+
+	// 1. Check OTP
+	var logID int
+	var userID int
+	query := `SELECT id, userid FROM otp_log WHERE emailid = $1 AND otp = $2 AND is_verified = false AND expires_at > NOW() LIMIT 1`
+
+	err := dal.DB.QueryRow(ctx, query, req.Email, req.OTP).Scan(&logID, &userID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Invalid or expired code"})
+		return
+	}
+
+	// 2. Update status
+	dal.DB.Exec(ctx, "UPDATE otp_log SET is_verified = true, verified_at = NOW() WHERE id = $1", logID)
+	dal.DB.Exec(ctx, "UPDATE users SET retry_cnt_lmt = 5 WHERE id = $1", userID)
+
+	// 3. Fetch Basic User Data (Removed problematic columns: address, acccode, state_territory, image_url)
+	userQuery := `
+		SELECT 
+			u.id, 
+			u.username, 
+			u.email, 
+			COALESCE(r.role_name, 'user') as role_name,
+			COALESCE(u.phoneno, ''),
+			COALESCE(u.city, '')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN roles r ON r.id = ur.role_id
-		ORDER BY u.id ASC
-	`
+		WHERE u.id = $1
+		ORDER BY r.role_name ASC
+		LIMIT 1`
 
-	rows, err := dal.Query(ctx, query)
+	var user SignInResponse 
+	err = dal.DB.QueryRow(ctx, userQuery, userID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.UserType, // This returns 'admin' correctly
+		&user.PhoneNo,
+		&user.City,
+	)
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Database error"})
+		log.Printf("Error fetching user after OTP: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "User details not found"})
 		return
-	}
-	defer rows.Close()
-
-	var users []gin.H
-	for rows.Next() {
-		var id int
-		var username, email, phoneno, role, imageUrl, city, createdAt string
-		var isActive bool
-
-		if err := rows.Scan(&id, &username, &email, &phoneno, &role, &isActive, &imageUrl, &city, &createdAt); err != nil {
-			continue
-		}
-		users = append(users, gin.H{
-			"id":         id,
-			"username":   username,
-			"email":      email,
-			"phoneno":    phoneno,
-			"role":       role,
-			"is_active":  isActive,
-			"image_url":  imageUrl,
-			"city":       city,
-			"created_at": createdAt,
-		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data":    users,
+		"message": "OTP verified successfully",
+		"data":    user,
 	})
+}
+// ============================================================
+// 3. CREATE / UPDATE USER (HYBRID)
+// ============================================================
+func Create_Cususer(c *gin.Context) {
+	ctx := c.Request.Context()
+	username := c.PostForm("username")
+	email := strings.ToLower(c.PostForm("email"))
+	phoneno := c.PostForm("phoneno")
+	usertype := c.PostForm("usertype")
+
+	tx, err := dal.DB.Begin(ctx)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var lastID int
+	query := `INSERT INTO users (username, email, phoneno, is_active) VALUES ($1, $2, $3, true) RETURNING id`
+	err = tx.QueryRow(ctx, query, username, email, phoneno).Scan(&lastID)
+	if err != nil {
+		c.JSON(409, gin.H{"success": false, "message": "Email already registered"})
+		return
+	}
+
+	// Role Assignment
+	var roleID int
+	_ = tx.QueryRow(ctx, "SELECT id FROM roles WHERE LOWER(role_name) = $1", strings.ToLower(usertype)).Scan(&roleID)
+	tx.Exec(ctx, "INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)", lastID, roleID)
+
+	tx.Commit(ctx)
+	c.JSON(200, gin.H{"success": true, "message": "Account created"})
+}
+
+func Update_Cususer(c *gin.Context) {
+	ctx := c.Request.Context()
+	id := c.PostForm("id")
+	username := c.PostForm("username")
+	bio := c.PostForm("bio")
+	city := c.PostForm("city")
+
+	file, err := c.FormFile("image")
+	var imagePath string
+	if err == nil {
+		// SEQUENTIAL NAMING: user_ID_TIMESTAMP.ext
+		ext := filepath.Ext(file.Filename)
+		imagePath = fmt.Sprintf("uploads/users/user_%s_%d%s", id, time.Now().Unix(), ext)
+		os.MkdirAll("uploads/users", 0755)
+		c.SaveUploadedFile(file, imagePath)
+	} else {
+		imagePath = c.PostForm("existing_image")
+	}
+
+	query := `UPDATE users SET username=$1, bio=$2, city=$3, image_url=$4, updated_at=NOW() WHERE id=$5`
+	_, err = dal.DB.Exec(ctx, query, username, bio, city, imagePath, id)
+
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "message": "Update failed"})
+		return
+	}
+	c.JSON(200, gin.H{"success": true})
+}
+
+// ============================================================
+// 4. SOFT DELETE & LOGOUT
+// ============================================================
+func Delete_Cususer(c *gin.Context) {
+	// Soft delete to preserve Ledger data
+	var body struct {
+		ID interface{} `json:"id"`
+	}
+	c.ShouldBindJSON(&body)
+
+	query := `UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1`
+	_, err := dal.DB.Exec(c.Request.Context(), query, AnyToInt(body.ID))
+
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "message": "Delete failed"})
+		return
+	}
+	c.JSON(200, gin.H{"success": true})
+}
+
+func Logout(c *gin.Context) {
+	// Updates last active time
+	userid := c.PostForm("userid")
+	dal.DB.Exec(c.Request.Context(), "UPDATE users SET updated_at = NOW() WHERE id = $1", userid)
+	c.JSON(200, gin.H{"success": true, "message": "Logged out"})
+}
+
+// ============================================================
+// 5. ADMIN UTILS
+// ============================================================
+func GetAllUsers(c *gin.Context) {
+	query := `
+		SELECT u.id, u.username, u.email, COALESCE(u.phoneno, ''), r.role_name, u.is_active
+		FROM users u
+		LEFT JOIN user_roles ur ON ur.user_id = u.id
+		LEFT JOIN roles r ON r.id = ur.role_id
+		ORDER BY u.id DESC`
+
+	rows, _ := dal.DB.Query(c.Request.Context(), query)
+	defer rows.Close()
+
+	users := []interface{}{}
+	for rows.Next() {
+		var id int
+		var name, email, phone, role string
+		var active bool
+		rows.Scan(&id, &name, &email, &phone, &role, &active)
+		users = append(users, gin.H{"id": id, "username": name, "email": email, "phone": phone, "role": role, "is_active": active})
+	}
+	c.JSON(200, gin.H{"success": true, "data": users})
 }
 
 // ────────────────────────────────────────────────

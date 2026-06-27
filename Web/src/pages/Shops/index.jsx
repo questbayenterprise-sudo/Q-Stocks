@@ -11,14 +11,14 @@ const MyShopListPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilter] = useState(false);
   const navigate = useNavigate();
-
   const user = JSON.parse(localStorage.getItem('user'));
-  const canAddShop = ['admin', 'owner', 'manager'].includes(user?.UserType_id?.toLowerCase());
+  const canAddShop = ['admin', 'owner', 'manager'].includes(user?.UserType?.toLowerCase());
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await fetchShops(user.id, user.userType_id);
+      debugger
+      const data = await fetchShops(user.id, user.UserType);
       setShops(data);
     } catch (err) {
       console.error(err);

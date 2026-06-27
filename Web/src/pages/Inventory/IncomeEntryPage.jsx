@@ -30,7 +30,7 @@ const IncomeEntryPage = () => {
     }
     
     // Load parallel data
-    Promise.all([getCustomers(), fetchShops(user.id, user.userType_id)])
+    Promise.all([getCustomers(), fetchShops(user.id, user.UserType)])
       .then(([customerData, shopData]) => {
         setCustomers(customerData);
         setShops(shopData);
