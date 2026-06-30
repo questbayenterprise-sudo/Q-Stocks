@@ -56,38 +56,61 @@ func CreateCustomer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": cust})
 }
 
-// GetCustomerLedger replicates the "Notebook" view logic
 func GetCustomerLedger(c *gin.Context) {
 	var req struct {
 		CustomerID string `json:"customer_id"`
+		Page       int    `json:"page"`  // New
+		Limit      int    `json:"limit"` // New
 	}
-	c.ShouldBindJSON(&req)
 
+	// Default values
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req.Page = 1
+		req.Limit = 10
+	}
+
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.Limit <= 0 {
+		req.Limit = 10
+	}
+	offset := (req.Page - 1) * req.Limit
+
+	// 1. Get Total Count (For pagination UI)
+	var totalCount int
+	countQuery := `SELECT COUNT(*) FROM customer_ledger WHERE customer_id = $1`
+	dal.DB.QueryRow(c.Request.Context(), countQuery, req.CustomerID).Scan(&totalCount)
+
+	// 2. Fetch Paginated Data
 	query := `
 		SELECT 
 			transaction_date, 
-			weight, 
-			rate, 
-			debit_amount, 
-			credit_amount, 
-			running_balance,
+			COALESCE(weight, 0), 
+			COALESCE(rate, 0), 
+			COALESCE(debit_amount, 0), 
+			COALESCE(credit_amount, 0), 
+			COALESCE(running_balance, 0),
 			COALESCE(remarks, '')
 		FROM customer_ledger 
 		WHERE customer_id = $1 
-		ORDER BY transaction_date DESC`
+		ORDER BY transaction_date DESC
+		LIMIT $2 OFFSET $3`
 
-	rows, err := dal.DB.Query(c.Request.Context(), query, req.CustomerID)
+	rows, err := dal.DB.Query(c.Request.Context(), query, req.CustomerID, req.Limit, offset)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "message": "Ledger fetch failed"})
 		return
 	}
 	defer rows.Close()
 
-	var ledger []interface{}
+	ledger := []interface{}{}
 	for rows.Next() {
-		var date, remarks string
+		var date interface{}
+		var remarks string
 		var w, r, d, c, bal float64
 		rows.Scan(&date, &w, &r, &d, &c, &bal, &remarks)
+
 		ledger = append(ledger, gin.H{
 			"transaction_date": date,
 			"weight":           w,
@@ -98,5 +121,16 @@ func GetCustomerLedger(c *gin.Context) {
 			"remarks":          remarks,
 		})
 	}
-	c.JSON(200, gin.H{"success": true, "data": ledger})
+
+	// 3. Return data with pagination metadata
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    ledger,
+		"pagination": gin.H{
+			"total_records": totalCount,
+			"current_page":  req.Page,
+			"limit":         req.Limit,
+			"total_pages":   (totalCount + req.Limit - 1) / req.Limit,
+		},
+	})
 }
