@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, TrendingUp, Wallet, AlertCircle, 
   Search, FileSpreadsheet, FileText, 
-  ChevronRight, Loader2 
+  ChevronRight, Loader2, Calendar 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -13,7 +13,14 @@ import api from '../../api/axiosInstance';
 const ReportsPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState({ total_revenue: 0, total_bookings: 0, occupancy: 0 });
+  // UPDATED: Initial state to match new Backend keys
+  const [summary, setSummary] = useState({ 
+    today_sales: 0, 
+    weekly_sales: 0, 
+    monthly_sales: 0, 
+    total_stock: 0, 
+    total_pending: 0 
+  });
   const [customerSummary, setCustomerSummary] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -41,6 +48,7 @@ const ReportsPage = () => {
   };
 
   const exportToExcel = () => {
+    // UPDATED: Include new sales data in Excel
     const dataToExport = customerSummary.map(c => ({
       "Customer Name": c.name,
       "Phone": c.phone,
@@ -60,8 +68,12 @@ const ReportsPage = () => {
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
-    doc.text(`Total Sales: Rs. ${summary.total_revenue}`, 14, 38);
-    doc.text(`Pending Dues: Rs. ${summary.occupancy}`, 14, 46);
+    
+    // UPDATED: PDF Financial Summary
+    doc.text(`Today's Sales: Rs. ${summary.today_sales}`, 14, 38);
+    doc.text(`Weekly Sales: Rs. ${summary.weekly_sales}`, 14, 46);
+    doc.text(`Monthly Sales: Rs. ${summary.monthly_sales}`, 14, 54);
+    doc.text(`Pending Dues: Rs. ${summary.total_pending}`, 14, 62);
 
     const tableColumn = ["Customer Name", "Phone", "Balance (Rs.)", "Status"];
     const tableRows = customerSummary.map(c => [
@@ -74,7 +86,7 @@ const ReportsPage = () => {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 55,
+      startY: 70, // Moved down to accommodate extra text
       theme: 'grid',
       headStyles: { fillColor: [0, 163, 108] },
       styles: { fontSize: 9 }
@@ -88,7 +100,6 @@ const ReportsPage = () => {
   );
 
   return (
-    // UNIFIED: bg-app-bg
     <div className="min-h-screen bg-app-bg p-4 md:p-8 lg:p-10 transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
         
@@ -102,31 +113,27 @@ const ReportsPage = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button 
-              onClick={exportToExcel}
-              className="flex items-center gap-2 bg-card-bg border border-border-v px-5 py-3 rounded-2xl font-bold text-text-h hover:bg-app-bg transition-all shadow-sm active:scale-95"
-            >
+            <button onClick={exportToExcel} className="flex items-center gap-2 bg-card-bg border border-border-v px-5 py-3 rounded-2xl font-bold text-text-h hover:bg-app-bg transition-all shadow-sm active:scale-95">
               <FileSpreadsheet size={18} className="text-green-600" />
               <span className="text-xs uppercase tracking-widest">Excel</span>
             </button>
-            <button 
-              onClick={exportToPdf}
-              className="flex items-center gap-2 bg-card-bg border border-border-v px-5 py-3 rounded-2xl font-bold text-text-h hover:bg-app-bg transition-all shadow-sm active:scale-95"
-            >
+            <button onClick={exportToPdf} className="flex items-center gap-2 bg-card-bg border border-border-v px-5 py-3 rounded-2xl font-bold text-text-h hover:bg-app-bg transition-all shadow-sm active:scale-95">
               <FileText size={18} className="text-red-500" />
               <span className="text-xs uppercase tracking-widest">PDF</span>
             </button>
           </div>
         </div>
 
-        {/* Analytics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <StatCard label="Total Sales" value={`₹${summary.total_revenue}`} icon={<TrendingUp />} color="bg-emerald-500" />
-          <StatCard label="Stock Weight" value={`${summary.total_bookings} kg`} icon={<Wallet />} color="bg-blue-500" />
-          <StatCard label="Pending Dues" value={`₹${summary.occupancy}`} icon={<AlertCircle />} color="bg-red-500" />
+        {/* UPDATED: Analytics Grid (5 Columns on Desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+          <StatCard label="Today Sales" value={`₹${summary.today_sales}`} icon={<TrendingUp />} color="bg-emerald-500" />
+          <StatCard label="Weekly Sales" value={`₹${summary.weekly_sales}`} icon={<Calendar />} color="bg-cyan-500" />
+          <StatCard label="Monthly Sales" value={`₹${summary.monthly_sales}`} icon={<BarChart3 />} color="bg-indigo-500" />
+          <StatCard label="Stock (kg)" value={`${summary.total_stock}`} icon={<Wallet />} color="bg-blue-500" />
+          <StatCard label="Pending Dues" value={`₹${summary.total_pending}`} icon={<AlertCircle />} color="bg-red-500" />
         </div>
 
-        {/* Customer Breakdown Section - UNIFIED: bg-card-bg, border-border-v */}
+        {/* Customer Breakdown Section */}
         <div className="bg-card-bg rounded-[2.5rem] shadow-sm border border-border-v overflow-hidden transition-colors duration-300">
           <div className="p-8 border-b border-border-v flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h3 className="text-lg font-black text-text-h uppercase tracking-tight">Customer Breakdown</h3>
@@ -137,7 +144,6 @@ const ReportsPage = () => {
                 placeholder="Search customer..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                // UNIFIED: bg-app-bg for input contrast
                 className="w-full pl-10 pr-4 py-3 bg-app-bg border-none rounded-xl outline-none focus:ring-2 focus:ring-q-green/20 font-medium text-sm text-text-h"
               />
             </div>
@@ -148,7 +154,6 @@ const ReportsPage = () => {
               <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-q-green" /></div>
             ) : (
               <table className="w-full text-left">
-                {/* UNIFIED: bg-app-bg for table header */}
                 <thead className="bg-app-bg text-[10px] font-black text-text-m uppercase tracking-[0.2em]">
                   <tr>
                     <th className="px-8 py-4">Customer Name</th>
@@ -179,21 +184,19 @@ const ReportsPage = () => {
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
 };
 
 const StatCard = ({ label, value, icon, color }) => (
-  // UNIFIED: bg-card-bg, border-border-v, text-text-h
-  <div className="bg-card-bg p-8 rounded-[2rem] shadow-sm border border-border-v flex items-center gap-6 transition-colors duration-300">
-    <div className={`w-14 h-14 rounded-2xl ${color} text-white flex items-center justify-center shadow-lg shadow-slate-900/5`}>
-      {React.cloneElement(icon, { size: 28 })}
+  <div className="bg-card-bg p-6 rounded-[2rem] shadow-sm border border-border-v flex items-center gap-4 transition-colors duration-300">
+    <div className={`w-12 h-12 rounded-2xl ${color} text-white flex items-center justify-center shadow-lg`}>
+      {React.cloneElement(icon, { size: 22 })}
     </div>
     <div>
-      <p className="text-[10px] font-black text-text-m uppercase tracking-widest leading-none mb-1">{label}</p>
-      <p className="text-2xl font-black text-text-h">{value}</p>
+      <p className="text-[9px] font-black text-text-m uppercase tracking-widest mb-1">{label}</p>
+      <p className="text-xl font-black text-text-h">{value}</p>
     </div>
   </div>
 );

@@ -6,12 +6,12 @@ import (
 	"log"
 	"net/http"
 )
-
-// Mapping to your React/Flutter expectations
 type ShopAnalytics struct {
-	TotalSales      float64       `json:"total_revenue"`  // Sum(orders.total_amount)
-	TotalStockValue float64       `json:"total_bookings"` // Sum(stocks.current_qty)
-	CustomerDues    float64       `json:"occupancy"`      // Sum(customers.current_balance)
+	TodaySales      float64       `json:"today_sales"`    // Today only
+	WeeklySales     float64       `json:"weekly_sales"`   // Last 7 days
+	MonthlySales    float64       `json:"monthly_sales"`  // Last 30 days
+	TotalStockValue float64       `json:"total_stock"`    // Matches React "Stock (kg)"
+	CustomerDues    float64       `json:"total_pending"`  // Matches React "Pending Dues"
 	WeeklyTrend     []WeeklyTrend `json:"weekly_trend"`
 }
 
@@ -19,33 +19,38 @@ type WeeklyTrend struct {
 	Day   string `json:"day_name"`
 	Count int    `json:"total_bookings"`
 }
-
 func GetShopAnalytics(c *gin.Context) {
 	ctx := c.Request.Context()
 	var stats ShopAnalytics
 	stats.WeeklyTrend = []WeeklyTrend{}
 
-	// 1. Fetch Totals using your specific tables
-	// COALESCE ensures no 500 error if tables are empty
+	// SQL Logic:
+	// We use FILTER (WHERE ...) to get sums for specific time periods in one query
 	query := `
 		SELECT 
-			(SELECT COALESCE(SUM(total_amount), 0) FROM orders) as total_sales,
+			COALESCE(SUM(total_amount) FILTER (WHERE created_at >= CURRENT_DATE), 0) as today_sales,
+			COALESCE(SUM(total_amount) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'), 0) as weekly_sales,
+			COALESCE(SUM(total_amount) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'), 0) as monthly_sales,
 			(SELECT COALESCE(SUM(current_qty), 0) FROM stocks) as stock_weight,
 			(SELECT COALESCE(SUM(current_balance), 0) FROM customers) as total_dues
+		FROM orders
 	`
+	
 	err := dal.DB.QueryRow(ctx, query).Scan(
-		&stats.TotalSales,
+		&stats.TodaySales,
+		&stats.WeeklySales,
+		&stats.MonthlySales,
 		&stats.TotalStockValue,
 		&stats.CustomerDues,
 	)
 
 	if err != nil {
-		log.Printf("Error: %v", err)
+		log.Printf("Error fetching analytics: %v", err)
 		c.JSON(500, gin.H{"success": false, "message": "Database query failed"})
 		return
 	}
 
-	// 2. Fetch Weekly Trend from 'orders' table
+	// 3. Fetch Weekly Trend (Keep this as is, it's already correct for the chart)
 	trendQuery := `
 		SELECT 
 			TO_CHAR(d.day, 'Dy') AS day_name,
@@ -70,7 +75,6 @@ func GetShopAnalytics(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": stats})
 }
-
 func GetRecentSales(c *gin.Context) {
 	var req struct {
 		Limit int `json:"limit"`
